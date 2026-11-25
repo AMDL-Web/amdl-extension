@@ -1,0 +1,24 @@
+{
+  "name": "amdl-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:wasm": "bash scripts/build-wasm.sh",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cli": "node scripts/cli.ts"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.310",
+    "@types/node": "^22.15.0",
+    "esbuild": "^0.25.4",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}

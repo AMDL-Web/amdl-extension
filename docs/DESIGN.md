@@ -17,6 +17,20 @@ decisions built on top of it. Reference code lives read-only in `/home/lyjw/Proj
   with no CORS headers.
 - Not yet verified live: `webPlayback` / `acquireWebPlaybackLicense` with a browser `media-user-token` (needs a
   logged-in session; production amdl uses the same calls in `internal/applemusic/playback.go`).
+- **M0 spike verified (2026-11-25, throwaway Chromium 155.0.8059.84, `--headless=new`):**
+  - **(a) DNR `Origin`/`Referer` rewrite on offscreen `fetch`**: `declarativeNetRequestWithHostAccess` session rule
+    rewriting `Origin: https://music.apple.com` + `Referer: https://music.apple.com/` for `initiatorDomains: [<extId>]`
+    applies to offscreen fetches to `amp-api.music.apple.com` — returned **200** with `extendedAssetUrls.enhancedHls`
+    (control check with rule disabled returned **401**). Selected primary transport: direct offscreen `fetch` + DNR.
+  - **(b) Wrapper `http://wrapper.lan/status` from offscreen**: blocked without host permission (`TypeError: Failed to
+    fetch`), succeeded (**200**, `ready: true`, `regions: ["cn", "jp"]`) from both offscreen and SW once
+    `http://wrapper.lan/*` host permission is present (no mixed-content or PNA block). Selected primary transport:
+    direct `WrapperClient` in offscreen with `optional_host_permissions` granted per wrapper origin.
+  - **(c) Offscreen `Worker` + `temari.wasm`**: classic `new Worker()` in offscreen instantiated `temari.wasm`
+    (67,351 B) under CSP `script-src 'self' 'wasm-unsafe-eval'; object-src 'self'` and decrypted Temari golden vector
+    `track_1720704575_s1` (9,354 B) byte-for-byte identically to `.pt`.
+  - Note: `decrypt_samples` export takes `(handle, buf_ptr, buf_len, table_ptr, count) -> i32` (adding `buf_len` for
+    strict bounds checking inside Rust).
 
 ## 1. Component layout
 
