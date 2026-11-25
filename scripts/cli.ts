@@ -8,6 +8,7 @@ import {
   TemariWasmInstance,
 } from "../src/core/fairplay.ts";
 import { runPipeline } from "../src/core/pipeline.ts";
+import { createWidevineAacLcHandler } from "../src/core/widevine/cenc.ts";
 import {
   type Codec,
   type CoverFormat,
@@ -87,6 +88,7 @@ try {
     appleApi,
     wrapper,
     fairPlayDecryptor,
+    aacLcDecryptor: createWidevineAacLcHandler(),
     logger,
     signal: controller.signal,
     onProgress(ev) {
