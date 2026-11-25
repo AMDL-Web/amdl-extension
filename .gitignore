@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+target/
+.ryugi/
+.DS_Store
+*.crx
+*.pem
+*.zip
+*.log
+.env
+.env.*
+coverage/
