@@ -15,8 +15,12 @@ decisions built on top of it. Reference code lives read-only in `/home/lyjw/Proj
   `aria-label` = title), `[data-testid="track-column-controls"]`, `[data-testid="track-number"]`.
 - `http://wrapper.lan/status` answers `{"code":0,"data":{"ready":true,"regions":["cn","jp"],"instances":[...]}}`
   with no CORS headers.
-- Not yet verified live: `webPlayback` / `acquireWebPlaybackLicense` with a browser `media-user-token` (needs a
-  logged-in session; production amdl uses the same calls in `internal/applemusic/playback.go`).
+- **Logged-in session verified (2026-11-25, lyjw's exported session in a headless browser, page-origin fetch):**
+  `webPlayback` → 200 without `failureType`, but **no `hls-playlist-url`**; the AAC-LC URL comes from `assets[]`
+  flavor `28:ctrp256` (flavors seen: `30:cbcp256`, `34:cbcp64`, `28:ctrp256`, `32:ctrp64`, `37:ibhp256`,
+  `38:ibhp64`). `/v1/me/storefront` and `syllable-lyrics` → 200. The Go reference engine with that browser
+  `media-user-token` and no wrapper completed `webPlayback` → Widevine license → decrypt → flatten/tag for track #6
+  (`jp` song with a `cn` account; PCM MD5 `50c30ce02050500a39842fa436c08cf9`, `ffmpeg` clean).
 - **M0 spike verified (2026-11-25, throwaway Chromium 155.0.8059.84, `--headless=new`):**
   - **(a) DNR `Origin`/`Referer` rewrite on offscreen `fetch`**: `declarativeNetRequestWithHostAccess` session rule
     rewriting `Origin: https://music.apple.com` + `Referer: https://music.apple.com/` for `initiatorDomains: [<extId>]`
