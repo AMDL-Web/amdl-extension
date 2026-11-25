@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AMDL — Downloads</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="dot" aria-hidden="true"></span>
+        <h1>AMDL</h1>
+      </div>
+      <div class="topbar-actions">
+        <span id="mode-badge" class="badge">Loading…</span>
+        <button id="open-options" class="icon-btn" title="Open Options" aria-label="Open Options">⚙</button>
+      </div>
+    </header>
+
+    <main id="queue-list" class="queue-list"></main>
+
+    <footer class="footer">
+      <span id="queue-summary" class="summary">No downloads</span>
+      <button id="clear-finished" class="text-btn" type="button">Clear finished</button>
+    </footer>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

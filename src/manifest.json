@@ -3,6 +3,24 @@
   "name": "AMDL — Apple Music Downloader",
   "version": "0.1.0",
   "description": "Download Apple Music tracks and albums directly from music.apple.com.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_title": "AMDL — Apple Music Downloader",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
   "permissions": [
     "offscreen",
     "declarativeNetRequestWithHostAccess",
@@ -26,6 +44,20 @@
     "service_worker": "background/sw.js",
     "type": "module"
   },
+  "content_scripts": [
+    {
+      "matches": ["https://music.apple.com/*"],
+      "js": ["content/main-world.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://music.apple.com/*"],
+      "js": ["content/inject.js"],
+      "world": "ISOLATED",
+      "run_at": "document_idle"
+    }
+  ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }

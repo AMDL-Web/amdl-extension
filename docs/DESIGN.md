@@ -52,8 +52,9 @@ music.apple.com tab                        extension
 - **Offscreen document** owns the job queue, all network I/O, crypto and muxing. It survives SW suspension and can
   spawn classic `Worker`s. Only `chrome.runtime` messaging is available there; it never touches storage directly
   (settings arrive with each job / settings-changed message).
-- **Content scripts**: `main-world.ts` (`world: "MAIN"`, `run_at: document_start`) answers token requests over
-  `window.postMessage` with a per-load random nonce; `inject.ts` (isolated world) renders UI and talks to the SW.
+- **Content scripts**: `main-world.ts` (`world: "MAIN"`, `run_at: document_start`) answers token requests over a
+  per-request transferred `MessagePort` (`MessageChannel`) with a random nonce so token replies never broadcast on
+  `window`; `inject.ts` (isolated world) renders UI and talks to the SW.
 - **`src/core/**` is chrome-free** (only `fetch`, WebCrypto, `DataView`), so the same pipeline runs in Node for tests
   and the reference CLI (§8).
 
@@ -176,10 +177,11 @@ keep attribution in file headers), using WebCrypto only:
 - **Injection** (`content/inject.ts`): SPA-aware (`navigation` API `navigatesuccess` + URL polling fallback +
   `MutationObserver` scoped to `main`). Routes: `/{sf}/album/{slug?}/{id}`, `/{sf}/song/{slug?}/{id}`,
   `/{sf}/album/...?...i={songId}`, playlist pages later.
-  - Header: "Download" button appended to `.primary-actions` (album → all tracks; song → that track).
-  - Track rows: small download icon inserted into `[data-testid="track-column-controls"]`; row → song id by
-    `data-row` index against the album's track list fetched once through the offscreen (`resolveAlbum`), falling back
-    to `a[href*="i="]` links. Per-row progress ring + done/error state from job broadcasts.
+  - Header: "Download" button appended to `[data-testid="container-detail-header"] .primary-actions` on album pages
+    (album → all tracks) and `.song-header-page__buttons` on song pages (song → that track).
+  - Track rows: small download icon inserted into `[data-testid="track-column-controls"]`; row → song id resolved from
+    `a[href*="/song/"]`, falling back to `a[href*="i="]` and `data-row` index against the album's track list fetched
+    once through the offscreen (`resolveAlbum`). Per-row progress ring + done/error state from job broadcasts.
   - Shadow-DOM-isolated styles, follows page dark/light (`prefers-color-scheme`), no layout shift.
 - **Popup**: mode badge (Zero-config AAC-LC / Wrapper: regions), current queue with progress, cancel/retry, clear.
 - **Options**: wrapper URL + token (+ "Test connection" → `/status` regions), codec select (disabled without wrapper),

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>AMDL — Options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header class="page-header">
+        <h1>AMDL Settings</h1>
+        <p class="subtitle">
+          Zero-config downloads 256 kbps AAC-LC with your logged-in Apple Music session.
+          Configure a wrapper to unlock ALAC, Atmos, and FairPlay codecs.
+        </p>
+      </header>
+
+      <form id="settings-form">
+        <section class="card">
+          <h2>Wrapper (Optional)</h2>
+          <div class="field">
+            <label for="wrapper-url">Wrapper URL</label>
+            <div class="row">
+              <input
+                id="wrapper-url"
+                type="text"
+                placeholder="http://wrapper.lan"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <button id="test-wrapper" type="button" class="btn secondary">
+                Test connection
+              </button>
+            </div>
+            <p id="wrapper-status" class="hint">
+              Leave blank to use zero-config AAC-LC mode.
+            </p>
+          </div>
+
+          <div class="field">
+            <label for="wrapper-token">Bearer Token (Optional)</label>
+            <div class="row">
+              <input
+                id="wrapper-token"
+                type="password"
+                placeholder="Stored locally only (never synced)"
+                autocomplete="off"
+              />
+              <button id="toggle-token" type="button" class="btn secondary">
+                Show
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Audio &amp; Quality</h2>
+          <div class="grid-2">
+            <div class="field">
+              <label for="codec">Preferred Codec</label>
+              <select id="codec">
+                <option value="alac">ALAC (Lossless / Hi-Res)</option>
+                <option value="aac">AAC (256 kbps FairPlay)</option>
+                <option value="aac-binaural">AAC Binaural</option>
+                <option value="aac-downmix">AAC Downmix</option>
+                <option value="ec3">Dolby Atmos (E-AC-3)</option>
+                <option value="ac3">Dolby Digital (AC-3)</option>
+                <option value="aac-lc">AAC-LC (256 kbps Widevine)</option>
+              </select>
+              <p id="codec-hint" class="hint"></p>
+            </div>
+
+            <div class="field">
+              <label for="language">Catalog Language (Optional)</label>
+              <input
+                id="language"
+                type="text"
+                placeholder="Auto (e.g. zh-Hans_CN, ja-JP, en-US)"
+              />
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="max-sample-rate">ALAC Max Sample Rate</label>
+              <select id="max-sample-rate">
+                <option value="44100">44.1 kHz</option>
+                <option value="48000">48 kHz</option>
+                <option value="96000">96 kHz</option>
+                <option value="192000">192 kHz (No cap)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="max-bit-depth">ALAC Max Bit Depth</label>
+              <select id="max-bit-depth">
+                <option value="16">16-bit</option>
+                <option value="24">24-bit</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="checkbox">
+            <input id="fallback" type="checkbox" />
+            <span>Fall back on missing codec (<code>requested → aac → aac-lc</code>)</span>
+          </label>
+        </section>
+
+        <section class="card">
+          <h2>Lyrics &amp; Cover Art</h2>
+          <label class="checkbox">
+            <input id="embed-lyrics" type="checkbox" />
+            <span>Embed lyrics (<code>©lyr</code>)</span>
+          </label>
+          <div class="grid-2 indent">
+            <div class="field">
+              <label for="lyrics-timing">Lyrics Timing</label>
+              <select id="lyrics-timing">
+                <option value="line">Line-timed LRC</option>
+                <option value="word">Word-timed Enhanced LRC</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Lyrics Extras</label>
+              <div class="inline-checks">
+                <label class="checkbox">
+                  <input id="lyrics-translation" type="checkbox" />
+                  <span>Translation</span>
+                </label>
+                <label class="checkbox">
+                  <input id="lyrics-pronunciation" type="checkbox" />
+                  <span>Pronunciation</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <label class="checkbox">
+            <input id="embed-cover" type="checkbox" />
+            <span>Embed cover art (<code>covr</code>)</span>
+          </label>
+          <div class="grid-2 indent">
+            <div class="field">
+              <label for="cover-size">Preferred Cover Size</label>
+              <select id="cover-size">
+                <option value="600x600">600 × 600</option>
+                <option value="1400x1400">1400 × 1400</option>
+                <option value="3000x3000">3000 × 3000</option>
+                <option value="5000x5000">5000 × 5000 (Max)</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="cover-format">Cover Format</label>
+              <select id="cover-format">
+                <option value="jpg">JPEG</option>
+                <option value="png">PNG</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Downloads</h2>
+          <div class="field">
+            <label for="filename-template">Filename Template</label>
+            <input id="filename-template" type="text" spellcheck="false" />
+            <p class="hint">
+              Variables: <code>{albumArtist}</code>, <code>{artist}</code>,
+              <code>{album}</code>, <code>{songNumber:02}</code>,
+              <code>{trackNumber:02}</code>, <code>{discNumber}</code>,
+              <code>{title}</code>, <code>{codec}</code>
+            </p>
+            <p id="template-preview" class="preview"></p>
+          </div>
+
+          <div class="grid-2">
+            <div class="field">
+              <label for="concurrency">Concurrent Track Downloads (1–4)</label>
+              <input id="concurrency" type="number" min="1" max="4" />
+            </div>
+            <div class="field align-end">
+              <label class="checkbox">
+                <input id="save-as" type="checkbox" />
+                <span>Prompt where to save each file (<code>saveAs</code>)</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <div class="actions">
+          <button id="save-btn" type="submit" class="btn primary">Save Settings</button>
+          <button id="reset-btn" type="button" class="btn secondary">Reset Defaults</button>
+          <span id="save-toast" class="toast" aria-live="polite"></span>
+        </div>
+      </form>
+    </div>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
