@@ -6,6 +6,7 @@ import type {
   LyricsTiming,
 } from "../core/types.ts";
 import { normalizeWrapperAddress } from "../core/wrapper-client.ts";
+import { applyI18n, t } from "../shared/i18n.ts";
 import type { TestWrapperResponse } from "../shared/messages.ts";
 import {
   DEFAULT_SETTINGS,
@@ -57,8 +58,8 @@ function syncDisabledStates(): void {
   maxDepthEl.disabled = !hasWrapper || codecEl.value !== "alac";
   fallbackEl.disabled = !hasWrapper;
   codecHintEl.textContent = hasWrapper
-    ? "Wrapper unlocked: FairPlay codecs & Hi-Res ALAC enabled."
-    : "Disabled without a wrapper (defaults to 256 kbps AAC-LC).";
+    ? t("optCodecHintWrapper")
+    : t("optCodecHintNoWrapper");
 
   lyricsTimingEl.disabled = !embedLyricsEl.checked;
   lyricsTransEl.disabled = !embedLyricsEl.checked;
@@ -79,7 +80,7 @@ function updateTemplatePreview(): void {
     discNumber: 1,
     codec: effectiveCodec,
   });
-  templatePreviewEl.textContent = `Preview: ${preview}`;
+  templatePreviewEl.textContent = t("optPreview", preview);
 
   const playlistPreview = formatDownloadPath(playlistFilenameTemplateEl.value, {
     albumArtist: "ReoNa",
@@ -93,7 +94,7 @@ function updateTemplatePreview(): void {
     playlistName: "Favourite Songs",
     playlistIndex: 3,
   });
-  playlistTemplatePreviewEl.textContent = `Preview: ${playlistPreview}`;
+  playlistTemplatePreviewEl.textContent = t("optPreview", playlistPreview);
 }
 
 function populateForm(s: ExtensionSettings): void {
@@ -168,36 +169,36 @@ function showToast(msg: string, isErr = false): void {
 toggleTokenBtn.addEventListener("click", () => {
   const masked = wrapperTokenEl.type === "password";
   wrapperTokenEl.type = masked ? "text" : "password";
-  toggleTokenBtn.textContent = masked ? "Hide" : "Show";
+  toggleTokenBtn.textContent = masked ? t("optHide") : t("optShow");
 });
 
 testWrapperBtn.addEventListener("click", () => {
   void (async () => {
     const raw = wrapperUrlEl.value.trim();
     if (!raw) {
-      wrapperStatusEl.textContent = "Enter a wrapper URL first.";
+      wrapperStatusEl.textContent = t("optEnterUrlFirst");
       wrapperStatusEl.className = "hint err";
       return;
     }
     const normalized = normalizeWrapperAddress(raw);
     wrapperUrlEl.value = normalized;
 
-    wrapperStatusEl.textContent = "Requesting host permission…";
+    wrapperStatusEl.textContent = t("optRequestingPermission");
     wrapperStatusEl.className = "hint";
 
     const perm = await ensureWrapperOriginPermission(normalized);
     if (!perm.pattern) {
-      wrapperStatusEl.textContent = "Invalid wrapper URL.";
+      wrapperStatusEl.textContent = t("optInvalidUrl");
       wrapperStatusEl.className = "hint err";
       return;
     }
     if (!perm.granted) {
-      wrapperStatusEl.textContent = `Host permission denied for ${perm.pattern}.`;
+      wrapperStatusEl.textContent = t("optPermissionDenied", perm.pattern);
       wrapperStatusEl.className = "hint err";
       return;
     }
 
-    wrapperStatusEl.textContent = `Connecting to ${normalized}…`;
+    wrapperStatusEl.textContent = t("optConnecting", normalized);
     const res = (await chrome.runtime.sendMessage({
       type: "test-wrapper",
       address: normalized,
@@ -207,11 +208,15 @@ testWrapperBtn.addEventListener("click", () => {
     if (res?.ok && res.status) {
       const regions = res.status.regions.length
         ? res.status.regions.join(", ")
-        : "none";
-      wrapperStatusEl.textContent = `Connected · ${res.status.ready ? "Ready" : "Not ready"} · Regions: ${regions}`;
+        : t("optNone");
+      wrapperStatusEl.textContent = t(
+        "optConnected",
+        res.status.ready ? t("optReady") : t("optNotReady"),
+        regions,
+      );
       wrapperStatusEl.className = res.status.ready ? "hint ok" : "hint err";
     } else {
-      wrapperStatusEl.textContent = `Connection failed: ${res?.error || "unknown error"}`;
+      wrapperStatusEl.textContent = t("optConnectionFailed", res?.error || t("optUnknownError"));
       wrapperStatusEl.className = "hint err";
     }
   })();
@@ -224,11 +229,11 @@ form.addEventListener("submit", (ev) => {
     if (settings.wrapperUrl) {
       const perm = await ensureWrapperOriginPermission(settings.wrapperUrl);
       if (!perm.pattern) {
-        showToast("Invalid wrapper URL", true);
+        showToast(t("optInvalidUrl"), true);
         return;
       }
       if (!perm.granted) {
-        showToast(`Permission denied for ${perm.pattern}`, true);
+        showToast(t("optPermissionDenied", perm.pattern), true);
         return;
       }
     }
@@ -237,7 +242,7 @@ form.addEventListener("submit", (ev) => {
     await chrome.runtime
       .sendMessage({ type: "settings-updated", settings: saved })
       .catch(() => {});
-    showToast("Settings saved");
+    showToast(t("optSaved"));
   })();
 });
 
@@ -248,7 +253,7 @@ resetBtn.addEventListener("click", () => {
     await chrome.runtime
       .sendMessage({ type: "settings-updated", settings: saved })
       .catch(() => {});
-    showToast("Defaults restored");
+    showToast(t("optDefaultsRestored"));
   })();
 });
 
@@ -270,4 +275,5 @@ for (const el of [
   });
 }
 
+applyI18n();
 void loadSettings().then(populateForm);

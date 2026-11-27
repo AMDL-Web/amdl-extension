@@ -1,0 +1,353 @@
+{
+  "extName": {
+    "message": "AMDL — Apple Music 下载器"
+  },
+  "extShortName": {
+    "message": "AMDL"
+  },
+  "extDescription": {
+    "message": "直接在 music.apple.com 上把 Apple Music 歌曲、专辑和歌单下载为带标签的 .m4a 文件。"
+  },
+  "popupTitle": {
+    "message": "AMDL — 下载"
+  },
+  "openOptions": {
+    "message": "打开设置"
+  },
+  "loading": {
+    "message": "加载中…"
+  },
+  "modeZeroConfig": {
+    "message": "免配置 AAC-LC"
+  },
+  "modeWrapperChecking": {
+    "message": "Wrapper：检查中…"
+  },
+  "modeWrapperRegions": {
+    "message": "Wrapper：$REGIONS$",
+    "placeholders": {
+      "regions": {
+        "content": "$1"
+      }
+    }
+  },
+  "modeWrapperNoAccount": {
+    "message": "无账号"
+  },
+  "modeWrapperOffline": {
+    "message": "Wrapper：离线"
+  },
+  "wrapperUnreachable": {
+    "message": "无法连接 Wrapper"
+  },
+  "emptyQueue": {
+    "message": "暂无下载。在 music.apple.com 打开专辑、歌单或歌曲，点下载按钮即可。"
+  },
+  "summaryNone": {
+    "message": "暂无下载"
+  },
+  "summaryCounts": {
+    "message": "进行中 $ACTIVE$ · 已结束 $FINISHED$",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "finished": {
+        "content": "$2"
+      }
+    }
+  },
+  "clearFinished": {
+    "message": "清除已结束"
+  },
+  "cancel": {
+    "message": "取消"
+  },
+  "retry": {
+    "message": "重试"
+  },
+  "stageQueued": {
+    "message": "排队中"
+  },
+  "stageResolve": {
+    "message": "解析歌曲"
+  },
+  "stageManifest": {
+    "message": "选择音频流"
+  },
+  "stageDownload": {
+    "message": "下载中"
+  },
+  "stageKeys": {
+    "message": "获取密钥"
+  },
+  "stageDecrypt": {
+    "message": "解密中"
+  },
+  "stageRemux": {
+    "message": "封装中"
+  },
+  "stageTag": {
+    "message": "写入标签"
+  },
+  "stageSaving": {
+    "message": "保存中"
+  },
+  "stageDone": {
+    "message": "已保存"
+  },
+  "stageDoneCodec": {
+    "message": "已保存（$CODEC$）",
+    "placeholders": {
+      "codec": {
+        "content": "$1"
+      }
+    }
+  },
+  "stageError": {
+    "message": "失败"
+  },
+  "stageCancelled": {
+    "message": "已取消"
+  },
+  "noteNoLyrics": {
+    "message": "这首歌没有歌词"
+  },
+  "noteLyricsNotFound": {
+    "message": "未找到歌词"
+  },
+  "noteLyricsFailed": {
+    "message": "歌词未嵌入"
+  },
+  "noteCoverFailed": {
+    "message": "封面未嵌入"
+  },
+  "noteCodecFallback": {
+    "message": "$FROM$ 不可用，已回退到 $TO$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "noteSkippedUnavailable": {
+    "message": "Apple Music 目录中不可用"
+  },
+  "optionsTitle": {
+    "message": "AMDL — 设置"
+  },
+  "optHeading": {
+    "message": "AMDL 设置"
+  },
+  "optSubtitle": {
+    "message": "不配置 Wrapper 时，AMDL 使用你已登录的 Apple Music 会话下载 256 kbps AAC-LC。配置 Wrapper 后可解锁 ALAC、杜比全景声等 FairPlay 编码。"
+  },
+  "optWrapperSection": {
+    "message": "Wrapper（可选）"
+  },
+  "optWrapperUrl": {
+    "message": "Wrapper 地址"
+  },
+  "optTestConnection": {
+    "message": "测试连接"
+  },
+  "optWrapperBlankHint": {
+    "message": "留空则使用免配置 AAC-LC 模式。"
+  },
+  "optBearerToken": {
+    "message": "Bearer Token（可选）"
+  },
+  "optTokenPlaceholder": {
+    "message": "仅保存在本机（不会同步）"
+  },
+  "optShow": {
+    "message": "显示"
+  },
+  "optHide": {
+    "message": "隐藏"
+  },
+  "optAudioSection": {
+    "message": "音频与音质"
+  },
+  "optCodec": {
+    "message": "首选编码"
+  },
+  "optCodecAlac": {
+    "message": "ALAC（无损 / 高解析）"
+  },
+  "optCodecAac": {
+    "message": "AAC（256 kbps FairPlay）"
+  },
+  "optCodecBinaural": {
+    "message": "AAC 双耳"
+  },
+  "optCodecDownmix": {
+    "message": "AAC 缩混"
+  },
+  "optCodecEc3": {
+    "message": "杜比全景声（E-AC-3）"
+  },
+  "optCodecAc3": {
+    "message": "杜比数字（AC-3）"
+  },
+  "optCodecAacLc": {
+    "message": "AAC-LC（256 kbps Widevine）"
+  },
+  "optCodecHintWrapper": {
+    "message": "已连接 Wrapper：可使用 FairPlay 编码与高解析 ALAC。"
+  },
+  "optCodecHintNoWrapper": {
+    "message": "未配置 Wrapper 时不可用（下载 256 kbps AAC-LC）。"
+  },
+  "optLanguage": {
+    "message": "目录语言（可选）"
+  },
+  "optLanguagePlaceholder": {
+    "message": "自动（如 zh-Hans_CN、ja-JP、en-US）"
+  },
+  "optMaxSampleRate": {
+    "message": "ALAC 最高采样率"
+  },
+  "optNoCap": {
+    "message": "192 kHz（不限制）"
+  },
+  "optMaxBitDepth": {
+    "message": "ALAC 最高位深"
+  },
+  "optFallback": {
+    "message": "编码缺失时自动回退"
+  },
+  "optLyricsSection": {
+    "message": "歌词与封面"
+  },
+  "optEmbedLyrics": {
+    "message": "嵌入歌词"
+  },
+  "optLyricsTiming": {
+    "message": "歌词时间轴"
+  },
+  "optLyricsLine": {
+    "message": "逐行 LRC"
+  },
+  "optLyricsWord": {
+    "message": "逐字增强 LRC"
+  },
+  "optLyricsExtras": {
+    "message": "歌词附加内容"
+  },
+  "optTranslation": {
+    "message": "翻译"
+  },
+  "optPronunciation": {
+    "message": "发音"
+  },
+  "optEmbedCover": {
+    "message": "嵌入封面"
+  },
+  "optCoverSize": {
+    "message": "封面尺寸"
+  },
+  "optCoverMax": {
+    "message": "5000 × 5000（最大）"
+  },
+  "optCoverFormat": {
+    "message": "封面格式"
+  },
+  "optDownloadsSection": {
+    "message": "下载"
+  },
+  "optFilenameTemplate": {
+    "message": "专辑 / 单曲文件名模板"
+  },
+  "optPlaylistTemplate": {
+    "message": "歌单文件名模板"
+  },
+  "optVariables": {
+    "message": "可用变量："
+  },
+  "optPreview": {
+    "message": "预览：$PATH$",
+    "placeholders": {
+      "path": {
+        "content": "$1"
+      }
+    }
+  },
+  "optConcurrency": {
+    "message": "同时下载曲目数（1–4）"
+  },
+  "optSaveAs": {
+    "message": "每个文件都询问保存位置"
+  },
+  "optSave": {
+    "message": "保存设置"
+  },
+  "optReset": {
+    "message": "恢复默认"
+  },
+  "optSaved": {
+    "message": "设置已保存"
+  },
+  "optDefaultsRestored": {
+    "message": "已恢复默认设置"
+  },
+  "optEnterUrlFirst": {
+    "message": "请先填写 Wrapper 地址。"
+  },
+  "optRequestingPermission": {
+    "message": "正在请求访问权限…"
+  },
+  "optInvalidUrl": {
+    "message": "Wrapper 地址无效。"
+  },
+  "optPermissionDenied": {
+    "message": "未授予 $PATTERN$ 的访问权限。",
+    "placeholders": {
+      "pattern": {
+        "content": "$1"
+      }
+    }
+  },
+  "optConnecting": {
+    "message": "正在连接 $URL$…",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "optConnected": {
+    "message": "已连接 · $READY$ · 地区：$REGIONS$",
+    "placeholders": {
+      "ready": {
+        "content": "$1"
+      },
+      "regions": {
+        "content": "$2"
+      }
+    }
+  },
+  "optReady": {
+    "message": "就绪"
+  },
+  "optNotReady": {
+    "message": "未就绪"
+  },
+  "optNone": {
+    "message": "无"
+  },
+  "optConnectionFailed": {
+    "message": "连接失败：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "optUnknownError": {
+    "message": "未知错误"
+  }
+}

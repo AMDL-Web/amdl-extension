@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>AMDL — Downloads</title>
+    <title data-i18n="popupTitle">AMDL — Downloads</title>
     <link rel="icon" href="../icons/icon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="popup.css" />
   </head>
@@ -13,16 +13,16 @@
         <h1>AMDL</h1>
       </div>
       <div class="topbar-actions">
-        <span id="mode-badge" class="badge">Loading…</span>
-        <button id="open-options" class="icon-btn" title="Open Options" aria-label="Open Options"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
+        <span id="mode-badge" class="badge" data-i18n="loading">Loading…</span>
+        <button id="open-options" class="icon-btn" title="Open Options" aria-label="Open Options" data-i18n-title="openOptions" data-i18n-aria-label="openOptions"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg></button>
       </div>
     </header>
 
     <main id="queue-list" class="queue-list"></main>
 
     <footer class="footer">
-      <span id="queue-summary" class="summary">No downloads</span>
-      <button id="clear-finished" class="text-btn" type="button">Clear finished</button>
+      <span id="queue-summary" class="summary" data-i18n="summaryNone">No downloads</span>
+      <button id="clear-finished" class="text-btn" type="button" data-i18n="clearFinished">Clear finished</button>
     </footer>
 
     <script type="module" src="popup.js"></script>

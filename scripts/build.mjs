@@ -48,6 +48,7 @@ const staticCopies = [
   ["src/options/options.css", "options/options.css"],
   ["src/wasm/temari.wasm", "temari.wasm"],
   ["src/icons", "icons"],
+  ["src/_locales", "_locales"],
 ];
 
 for (const [from, to] of staticCopies) {

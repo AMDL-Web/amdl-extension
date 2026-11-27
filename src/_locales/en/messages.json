@@ -1,0 +1,353 @@
+{
+  "extName": {
+    "message": "AMDL — Apple Music Downloader"
+  },
+  "extShortName": {
+    "message": "AMDL"
+  },
+  "extDescription": {
+    "message": "Download Apple Music songs, albums and playlists as tagged .m4a files right from music.apple.com."
+  },
+  "popupTitle": {
+    "message": "AMDL — Downloads"
+  },
+  "openOptions": {
+    "message": "Open settings"
+  },
+  "loading": {
+    "message": "Loading…"
+  },
+  "modeZeroConfig": {
+    "message": "Zero-config AAC-LC"
+  },
+  "modeWrapperChecking": {
+    "message": "Wrapper: checking…"
+  },
+  "modeWrapperRegions": {
+    "message": "Wrapper: $REGIONS$",
+    "placeholders": {
+      "regions": {
+        "content": "$1"
+      }
+    }
+  },
+  "modeWrapperNoAccount": {
+    "message": "no account"
+  },
+  "modeWrapperOffline": {
+    "message": "Wrapper: offline"
+  },
+  "wrapperUnreachable": {
+    "message": "Wrapper unreachable"
+  },
+  "emptyQueue": {
+    "message": "No downloads yet. Open an album, playlist or song on music.apple.com and click the download button."
+  },
+  "summaryNone": {
+    "message": "No downloads"
+  },
+  "summaryCounts": {
+    "message": "$ACTIVE$ active · $FINISHED$ finished",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "finished": {
+        "content": "$2"
+      }
+    }
+  },
+  "clearFinished": {
+    "message": "Clear finished"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "retry": {
+    "message": "Retry"
+  },
+  "stageQueued": {
+    "message": "Queued"
+  },
+  "stageResolve": {
+    "message": "Resolving song"
+  },
+  "stageManifest": {
+    "message": "Selecting stream"
+  },
+  "stageDownload": {
+    "message": "Downloading"
+  },
+  "stageKeys": {
+    "message": "Fetching keys"
+  },
+  "stageDecrypt": {
+    "message": "Decrypting"
+  },
+  "stageRemux": {
+    "message": "Remuxing"
+  },
+  "stageTag": {
+    "message": "Writing tags"
+  },
+  "stageSaving": {
+    "message": "Saving"
+  },
+  "stageDone": {
+    "message": "Saved"
+  },
+  "stageDoneCodec": {
+    "message": "Saved ($CODEC$)",
+    "placeholders": {
+      "codec": {
+        "content": "$1"
+      }
+    }
+  },
+  "stageError": {
+    "message": "Failed"
+  },
+  "stageCancelled": {
+    "message": "Cancelled"
+  },
+  "noteNoLyrics": {
+    "message": "No lyrics for this song"
+  },
+  "noteLyricsNotFound": {
+    "message": "No lyrics found"
+  },
+  "noteLyricsFailed": {
+    "message": "Lyrics left out"
+  },
+  "noteCoverFailed": {
+    "message": "Cover left out"
+  },
+  "noteCodecFallback": {
+    "message": "$FROM$ unavailable; fell back to $TO$",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "noteSkippedUnavailable": {
+    "message": "Not available in the Apple Music catalog"
+  },
+  "optionsTitle": {
+    "message": "AMDL — Settings"
+  },
+  "optHeading": {
+    "message": "AMDL Settings"
+  },
+  "optSubtitle": {
+    "message": "Without a wrapper, AMDL downloads 256 kbps AAC-LC with your logged-in Apple Music session. Configure a wrapper to unlock ALAC, Dolby Atmos and the other FairPlay codecs."
+  },
+  "optWrapperSection": {
+    "message": "Wrapper (optional)"
+  },
+  "optWrapperUrl": {
+    "message": "Wrapper URL"
+  },
+  "optTestConnection": {
+    "message": "Test connection"
+  },
+  "optWrapperBlankHint": {
+    "message": "Leave blank to use zero-config AAC-LC mode."
+  },
+  "optBearerToken": {
+    "message": "Bearer token (optional)"
+  },
+  "optTokenPlaceholder": {
+    "message": "Stored locally only (never synced)"
+  },
+  "optShow": {
+    "message": "Show"
+  },
+  "optHide": {
+    "message": "Hide"
+  },
+  "optAudioSection": {
+    "message": "Audio & quality"
+  },
+  "optCodec": {
+    "message": "Preferred codec"
+  },
+  "optCodecAlac": {
+    "message": "ALAC (Lossless / Hi-Res)"
+  },
+  "optCodecAac": {
+    "message": "AAC (256 kbps FairPlay)"
+  },
+  "optCodecBinaural": {
+    "message": "AAC Binaural"
+  },
+  "optCodecDownmix": {
+    "message": "AAC Downmix"
+  },
+  "optCodecEc3": {
+    "message": "Dolby Atmos (E-AC-3)"
+  },
+  "optCodecAc3": {
+    "message": "Dolby Digital (AC-3)"
+  },
+  "optCodecAacLc": {
+    "message": "AAC-LC (256 kbps Widevine)"
+  },
+  "optCodecHintWrapper": {
+    "message": "Wrapper unlocked: FairPlay codecs and Hi-Res ALAC are enabled."
+  },
+  "optCodecHintNoWrapper": {
+    "message": "Disabled without a wrapper (downloads 256 kbps AAC-LC)."
+  },
+  "optLanguage": {
+    "message": "Catalog language (optional)"
+  },
+  "optLanguagePlaceholder": {
+    "message": "Auto (e.g. zh-Hans_CN, ja-JP, en-US)"
+  },
+  "optMaxSampleRate": {
+    "message": "ALAC max sample rate"
+  },
+  "optNoCap": {
+    "message": "192 kHz (no cap)"
+  },
+  "optMaxBitDepth": {
+    "message": "ALAC max bit depth"
+  },
+  "optFallback": {
+    "message": "Fall back when the codec is missing"
+  },
+  "optLyricsSection": {
+    "message": "Lyrics & cover art"
+  },
+  "optEmbedLyrics": {
+    "message": "Embed lyrics"
+  },
+  "optLyricsTiming": {
+    "message": "Lyrics timing"
+  },
+  "optLyricsLine": {
+    "message": "Line-timed LRC"
+  },
+  "optLyricsWord": {
+    "message": "Word-timed enhanced LRC"
+  },
+  "optLyricsExtras": {
+    "message": "Lyrics extras"
+  },
+  "optTranslation": {
+    "message": "Translation"
+  },
+  "optPronunciation": {
+    "message": "Pronunciation"
+  },
+  "optEmbedCover": {
+    "message": "Embed cover art"
+  },
+  "optCoverSize": {
+    "message": "Preferred cover size"
+  },
+  "optCoverMax": {
+    "message": "5000 × 5000 (max)"
+  },
+  "optCoverFormat": {
+    "message": "Cover format"
+  },
+  "optDownloadsSection": {
+    "message": "Downloads"
+  },
+  "optFilenameTemplate": {
+    "message": "Album / song filename template"
+  },
+  "optPlaylistTemplate": {
+    "message": "Playlist filename template"
+  },
+  "optVariables": {
+    "message": "Variables:"
+  },
+  "optPreview": {
+    "message": "Preview: $PATH$",
+    "placeholders": {
+      "path": {
+        "content": "$1"
+      }
+    }
+  },
+  "optConcurrency": {
+    "message": "Concurrent track downloads (1–4)"
+  },
+  "optSaveAs": {
+    "message": "Ask where to save each file"
+  },
+  "optSave": {
+    "message": "Save settings"
+  },
+  "optReset": {
+    "message": "Reset defaults"
+  },
+  "optSaved": {
+    "message": "Settings saved"
+  },
+  "optDefaultsRestored": {
+    "message": "Defaults restored"
+  },
+  "optEnterUrlFirst": {
+    "message": "Enter a wrapper URL first."
+  },
+  "optRequestingPermission": {
+    "message": "Requesting host permission…"
+  },
+  "optInvalidUrl": {
+    "message": "Invalid wrapper URL."
+  },
+  "optPermissionDenied": {
+    "message": "Host permission denied for $PATTERN$.",
+    "placeholders": {
+      "pattern": {
+        "content": "$1"
+      }
+    }
+  },
+  "optConnecting": {
+    "message": "Connecting to $URL$…",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "optConnected": {
+    "message": "Connected · $READY$ · Regions: $REGIONS$",
+    "placeholders": {
+      "ready": {
+        "content": "$1"
+      },
+      "regions": {
+        "content": "$2"
+      }
+    }
+  },
+  "optReady": {
+    "message": "Ready"
+  },
+  "optNotReady": {
+    "message": "Not ready"
+  },
+  "optNone": {
+    "message": "none"
+  },
+  "optConnectionFailed": {
+    "message": "Connection failed: $ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "optUnknownError": {
+    "message": "unknown error"
+  }
+}

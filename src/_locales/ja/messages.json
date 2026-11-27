@@ -1,0 +1,353 @@
+{
+  "extName": {
+    "message": "AMDL — Apple Music ダウンローダー"
+  },
+  "extShortName": {
+    "message": "AMDL"
+  },
+  "extDescription": {
+    "message": "music.apple.com から Apple Music の曲・アルバム・プレイリストをタグ付き .m4a として直接ダウンロードします。"
+  },
+  "popupTitle": {
+    "message": "AMDL — ダウンロード"
+  },
+  "openOptions": {
+    "message": "設定を開く"
+  },
+  "loading": {
+    "message": "読み込み中…"
+  },
+  "modeZeroConfig": {
+    "message": "設定不要 AAC-LC"
+  },
+  "modeWrapperChecking": {
+    "message": "Wrapper：確認中…"
+  },
+  "modeWrapperRegions": {
+    "message": "Wrapper：$REGIONS$",
+    "placeholders": {
+      "regions": {
+        "content": "$1"
+      }
+    }
+  },
+  "modeWrapperNoAccount": {
+    "message": "アカウントなし"
+  },
+  "modeWrapperOffline": {
+    "message": "Wrapper：オフライン"
+  },
+  "wrapperUnreachable": {
+    "message": "Wrapper に接続できません"
+  },
+  "emptyQueue": {
+    "message": "ダウンロードはまだありません。music.apple.com でアルバム・プレイリスト・曲を開き、ダウンロードボタンを押してください。"
+  },
+  "summaryNone": {
+    "message": "ダウンロードなし"
+  },
+  "summaryCounts": {
+    "message": "進行中 $ACTIVE$ · 完了 $FINISHED$",
+    "placeholders": {
+      "active": {
+        "content": "$1"
+      },
+      "finished": {
+        "content": "$2"
+      }
+    }
+  },
+  "clearFinished": {
+    "message": "完了分を消去"
+  },
+  "cancel": {
+    "message": "キャンセル"
+  },
+  "retry": {
+    "message": "再試行"
+  },
+  "stageQueued": {
+    "message": "待機中"
+  },
+  "stageResolve": {
+    "message": "曲情報を取得中"
+  },
+  "stageManifest": {
+    "message": "ストリームを選択中"
+  },
+  "stageDownload": {
+    "message": "ダウンロード中"
+  },
+  "stageKeys": {
+    "message": "キーを取得中"
+  },
+  "stageDecrypt": {
+    "message": "復号中"
+  },
+  "stageRemux": {
+    "message": "リマックス中"
+  },
+  "stageTag": {
+    "message": "タグを書き込み中"
+  },
+  "stageSaving": {
+    "message": "保存中"
+  },
+  "stageDone": {
+    "message": "保存済み"
+  },
+  "stageDoneCodec": {
+    "message": "保存済み（$CODEC$）",
+    "placeholders": {
+      "codec": {
+        "content": "$1"
+      }
+    }
+  },
+  "stageError": {
+    "message": "失敗"
+  },
+  "stageCancelled": {
+    "message": "キャンセル済み"
+  },
+  "noteNoLyrics": {
+    "message": "この曲には歌詞がありません"
+  },
+  "noteLyricsNotFound": {
+    "message": "歌詞が見つかりません"
+  },
+  "noteLyricsFailed": {
+    "message": "歌詞は埋め込まれていません"
+  },
+  "noteCoverFailed": {
+    "message": "カバーは埋め込まれていません"
+  },
+  "noteCodecFallback": {
+    "message": "$FROM$ は利用できないため $TO$ に切り替えました",
+    "placeholders": {
+      "from": {
+        "content": "$1"
+      },
+      "to": {
+        "content": "$2"
+      }
+    }
+  },
+  "noteSkippedUnavailable": {
+    "message": "Apple Music カタログにありません"
+  },
+  "optionsTitle": {
+    "message": "AMDL — 設定"
+  },
+  "optHeading": {
+    "message": "AMDL 設定"
+  },
+  "optSubtitle": {
+    "message": "Wrapper なしでは、ログイン中の Apple Music セッションで 256 kbps AAC-LC をダウンロードします。Wrapper を設定すると ALAC・Dolby Atmos などの FairPlay コーデックが使えます。"
+  },
+  "optWrapperSection": {
+    "message": "Wrapper（任意）"
+  },
+  "optWrapperUrl": {
+    "message": "Wrapper URL"
+  },
+  "optTestConnection": {
+    "message": "接続テスト"
+  },
+  "optWrapperBlankHint": {
+    "message": "空欄のままにすると設定不要の AAC-LC モードになります。"
+  },
+  "optBearerToken": {
+    "message": "Bearer トークン（任意）"
+  },
+  "optTokenPlaceholder": {
+    "message": "この端末にのみ保存（同期しません）"
+  },
+  "optShow": {
+    "message": "表示"
+  },
+  "optHide": {
+    "message": "隠す"
+  },
+  "optAudioSection": {
+    "message": "オーディオと音質"
+  },
+  "optCodec": {
+    "message": "優先コーデック"
+  },
+  "optCodecAlac": {
+    "message": "ALAC（ロスレス / ハイレゾ）"
+  },
+  "optCodecAac": {
+    "message": "AAC（256 kbps FairPlay）"
+  },
+  "optCodecBinaural": {
+    "message": "AAC バイノーラル"
+  },
+  "optCodecDownmix": {
+    "message": "AAC ダウンミックス"
+  },
+  "optCodecEc3": {
+    "message": "Dolby Atmos（E-AC-3）"
+  },
+  "optCodecAc3": {
+    "message": "Dolby Digital（AC-3）"
+  },
+  "optCodecAacLc": {
+    "message": "AAC-LC（256 kbps Widevine）"
+  },
+  "optCodecHintWrapper": {
+    "message": "Wrapper 有効：FairPlay コーデックとハイレゾ ALAC が使えます。"
+  },
+  "optCodecHintNoWrapper": {
+    "message": "Wrapper がない場合は無効です（256 kbps AAC-LC をダウンロード）。"
+  },
+  "optLanguage": {
+    "message": "カタログ言語（任意）"
+  },
+  "optLanguagePlaceholder": {
+    "message": "自動（例：zh-Hans_CN、ja-JP、en-US）"
+  },
+  "optMaxSampleRate": {
+    "message": "ALAC 最大サンプルレート"
+  },
+  "optNoCap": {
+    "message": "192 kHz（上限なし）"
+  },
+  "optMaxBitDepth": {
+    "message": "ALAC 最大ビット深度"
+  },
+  "optFallback": {
+    "message": "コーデックがない場合にフォールバック"
+  },
+  "optLyricsSection": {
+    "message": "歌詞とカバーアート"
+  },
+  "optEmbedLyrics": {
+    "message": "歌詞を埋め込む"
+  },
+  "optLyricsTiming": {
+    "message": "歌詞のタイミング"
+  },
+  "optLyricsLine": {
+    "message": "行単位 LRC"
+  },
+  "optLyricsWord": {
+    "message": "単語単位の拡張 LRC"
+  },
+  "optLyricsExtras": {
+    "message": "歌詞の追加情報"
+  },
+  "optTranslation": {
+    "message": "翻訳"
+  },
+  "optPronunciation": {
+    "message": "読み"
+  },
+  "optEmbedCover": {
+    "message": "カバーアートを埋め込む"
+  },
+  "optCoverSize": {
+    "message": "カバーサイズ"
+  },
+  "optCoverMax": {
+    "message": "5000 × 5000（最大）"
+  },
+  "optCoverFormat": {
+    "message": "カバー形式"
+  },
+  "optDownloadsSection": {
+    "message": "ダウンロード"
+  },
+  "optFilenameTemplate": {
+    "message": "アルバム / 曲のファイル名テンプレート"
+  },
+  "optPlaylistTemplate": {
+    "message": "プレイリストのファイル名テンプレート"
+  },
+  "optVariables": {
+    "message": "使用できる変数："
+  },
+  "optPreview": {
+    "message": "プレビュー：$PATH$",
+    "placeholders": {
+      "path": {
+        "content": "$1"
+      }
+    }
+  },
+  "optConcurrency": {
+    "message": "同時ダウンロード数（1–4）"
+  },
+  "optSaveAs": {
+    "message": "ファイルごとに保存先を確認"
+  },
+  "optSave": {
+    "message": "設定を保存"
+  },
+  "optReset": {
+    "message": "デフォルトに戻す"
+  },
+  "optSaved": {
+    "message": "設定を保存しました"
+  },
+  "optDefaultsRestored": {
+    "message": "デフォルトに戻しました"
+  },
+  "optEnterUrlFirst": {
+    "message": "先に Wrapper URL を入力してください。"
+  },
+  "optRequestingPermission": {
+    "message": "アクセス権限をリクエスト中…"
+  },
+  "optInvalidUrl": {
+    "message": "Wrapper URL が無効です。"
+  },
+  "optPermissionDenied": {
+    "message": "$PATTERN$ へのアクセス権限が拒否されました。",
+    "placeholders": {
+      "pattern": {
+        "content": "$1"
+      }
+    }
+  },
+  "optConnecting": {
+    "message": "$URL$ に接続中…",
+    "placeholders": {
+      "url": {
+        "content": "$1"
+      }
+    }
+  },
+  "optConnected": {
+    "message": "接続済み · $READY$ · リージョン：$REGIONS$",
+    "placeholders": {
+      "ready": {
+        "content": "$1"
+      },
+      "regions": {
+        "content": "$2"
+      }
+    }
+  },
+  "optReady": {
+    "message": "準備完了"
+  },
+  "optNotReady": {
+    "message": "準備中"
+  },
+  "optNone": {
+    "message": "なし"
+  },
+  "optConnectionFailed": {
+    "message": "接続に失敗しました：$ERROR$",
+    "placeholders": {
+      "error": {
+        "content": "$1"
+      }
+    }
+  },
+  "optUnknownError": {
+    "message": "不明なエラー"
+  }
+}
