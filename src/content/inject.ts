@@ -1011,6 +1011,16 @@ function mountHeaderButton(route: PageRoute): void {
 
     mountedButtons.add(ref);
     updateHeaderButtonVisual(ref);
+
+    // Resolve the collection's track list up front (cached, de-duplicated) so the
+    // header reflects tracks already downloaded individually (e.g. a single-track
+    // album whose only song was downloaded from its row or song page).
+    const colKind = getCollectionKindForHeader(ref);
+    if (colKind && ref.collectionId) {
+      void resolveCollection(colKind, ref.storefront, ref.collectionId)
+        .then(() => refreshAllButtonVisuals())
+        .catch(() => undefined);
+    }
   });
 }
 

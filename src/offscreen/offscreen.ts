@@ -316,7 +316,12 @@ async function runJob(job: InternalJob): Promise<void> {
       total: result.totalSize,
     });
 
-    const blob = new Blob(result.parts as BlobPart[], { type: "audio/mp4" });
+    // application/octet-stream: Chrome on macOS/Windows rewrites a suggested
+    // ".m4a" to ".mp4" when the blob is typed audio/mp4 (extension fix-up from
+    // the MIME type). An opaque type keeps the filename exactly as given.
+    const blob = new Blob(result.parts as BlobPart[], {
+      type: "application/octet-stream",
+    });
     const blobUrl = URL.createObjectURL(blob);
     // Fallback safety cleanup after 10 minutes if download event is never seen.
     const safetyTimer = setTimeout(() => revokeBlobUrl(blobUrl), 10 * 60 * 1000);
