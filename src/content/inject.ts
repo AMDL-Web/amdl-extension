@@ -217,6 +217,20 @@ const INJECTED_CSS = `
     pointer-events: none;
   }
 
+  svg[data-amdl-icon="done"] .amdl-fill {
+    fill: currentColor !important;
+    stroke: none !important;
+  }
+  button[${HEADER_BTN_ATTR}] svg[data-amdl-icon="done"] mask rect,
+  button[${ROW_BTN_ATTR}] svg[data-amdl-icon="done"] mask rect {
+    fill: #fff !important;
+    stroke: none !important;
+  }
+  button[${HEADER_BTN_ATTR}] svg[data-amdl-icon="done"] mask path,
+  button[${ROW_BTN_ATTR}] svg[data-amdl-icon="done"] mask path {
+    fill: none !important;
+    stroke: #000 !important;
+  }
   .amdl-ring-bg {
     stroke: currentColor !important;
     opacity: 0.25;
@@ -258,7 +272,13 @@ function ensureStylesheet(): void {
 
 // Clean, subtle SF-Symbol-inspired SVG icons using currentColor only.
 const ICON_DOWNLOAD = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v7.5"/><path d="M5 7.25 8 10.25l3-3"/><path d="M2.75 11.75v1a1 1 0 0 0 1 1h8.5a1 1 0 0 0 1-1v-1"/></svg>`;
-const ICON_CHECK = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.25 8.5 6.5 11.75 12.75 4.75"/></svg>`;
+// "Downloaded" glyph: a solid disc with a down arrow knocked out (like Apple's
+// arrow.down.circle.fill), deliberately different from the library ✓ button.
+let doneIconSeq = 0;
+function iconDownloaded(): string {
+  const id = `amdl-dl-mask-${INSTANCE_ID.slice(0, 8)}-${++doneIconSeq}`;
+  return `<svg viewBox="0 0 16 16" aria-hidden="true"><defs><mask id="${id}" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16"><rect width="16" height="16" fill="#fff"/><path d="M8 4.5v6M5.4 8.1 8 10.7l2.6-2.6" fill="none" stroke="#000" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></mask></defs><circle class="amdl-fill" cx="8" cy="8" r="7" mask="url(#${id})"/></svg>`;
+}
 const ICON_ERROR = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5"/><path d="M8 11h.01"/></svg>`;
 const ICON_MENU_DOWNLOAD = `<svg class="context-menu__option-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v7.5"/><path d="M5 7.25 8 10.25l3-3"/><path d="M2.75 11.75v1a1 1 0 0 0 1 1h8.5a1 1 0 0 0 1-1v-1"/></svg>`;
 
@@ -532,7 +552,7 @@ function updateRowButtonVisual(ref: ButtonRef): void {
   }
   if (job.stage === "done") {
     ref.btn.dataset.state = "done";
-    setIcon(ref.btn, ICON_CHECK, "check");
+    setIcon(ref.btn, iconDownloaded(), "done");
     const detail = job.notes.length
       ? `${t.downloaded} — ${job.message} (${job.notes.join("; ")})`
       : `${t.downloaded} — ${job.message}`;
@@ -574,7 +594,7 @@ function updateHeaderButtonVisual(ref: ButtonRef): void {
     }
     if (job.stage === "done") {
       ref.btn.dataset.state = "done";
-      setIcon(ref.btn, ICON_CHECK, "check");
+      setIcon(ref.btn, iconDownloaded(), "done");
       ref.btn.title = `${t.downloaded} — ${job.message}`;
       ref.btn.setAttribute("aria-label", t.downloaded);
       return;
@@ -667,7 +687,7 @@ function updateHeaderButtonVisual(ref: ButtonRef): void {
     ref.btn.setAttribute("aria-label", msg);
   } else if (doneCount === downloadable.length) {
     ref.btn.dataset.state = "done";
-    setIcon(ref.btn, ICON_CHECK, "check");
+    setIcon(ref.btn, iconDownloaded(), "done");
     const msg = `${doneLabel} (${doneCount}/${downloadable.length})${suffix}`;
     ref.btn.title = msg;
     ref.btn.setAttribute("aria-label", doneLabel);
