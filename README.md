@@ -12,7 +12,7 @@ A lightweight Chrome (Manifest V3) extension that integrates directly into `http
 
 ## Install
 
-1. Download `amdl-extension-vX.Y.Z.zip` from the latest [GitHub Release](https://github.com/LYJW131/amdl-extension/releases/latest) and unzip it (it contains an `amdl-extension/` folder; keep it in a permanent location).
+1. Download `amdl-extension-vX.Y.Z.zip` from the latest [GitHub Release](https://github.com/AMDL-Web/amdl-extension/releases/latest) and unzip it (it contains an `amdl-extension/` folder; keep it in a permanent location).
 2. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and select the `amdl-extension/` folder.
 3. To update, unzip the new release over the same folder and click **Reload** on the extension card.
 
