@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm package
+
+      - name: Bundle size
+        run: |
+          {
+            echo '### Bundle size'
+            echo
+            echo '| File | Bytes |'
+            echo '| --- | ---: |'
+            (cd dist && find . -type f \( -name '*.js' -o -name '*.wasm' \) -printf '%P\t%s\n' | sort) \
+              | while IFS=$'\t' read -r f s; do echo "| \`$f\` | $s |"; done
+            echo "| **dist/ total** | $(du -sb dist | cut -f1) |"
+            echo "| **release zip** | $(stat -c %s release/*.zip) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: amdl-extension-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+
+  wasm:
+    name: Rebuild temari.wasm from source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: '1.85'
+          targets: wasm32-unknown-unknown
+
+      - name: Build crates/temari-wasm
+        working-directory: crates/temari-wasm
+        run: cargo build --release --locked --target wasm32-unknown-unknown
+
+      - name: Compare with the committed binary
+        run: |
+          built=crates/temari-wasm/target/wasm32-unknown-unknown/release/temari_wasm.wasm
+          ls -l "$built" src/wasm/temari.wasm
+          if cmp -s "$built" src/wasm/temari.wasm; then
+            echo "temari.wasm is byte-identical to the source build." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::notice::temari.wasm differs byte-wise from this toolchain's build; the golden-vector test below decides."
+          fi
+          cp "$built" src/wasm/temari.wasm
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '26'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Golden FairPlay vector against the rebuilt wasm
+        run: pnpm exec vitest run tests/temari-wasm.test.ts

@@ -1,0 +1,24 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  // Takes effect once the Renovate GitHub App (https://github.com/apps/renovate)
+  // is installed on this repository.
+  extends: ["config:recommended", "helpers:pinGitHubActionDigestsToSemver"],
+  timezone: "Asia/Shanghai",
+  schedule: ["* 9 * * 1"],
+  minimumReleaseAge: "3 days",
+  dependencyDashboard: true,
+  // Dependency bumps are not features or fixes; keep them out of the changelog.
+  semanticCommitType: "chore",
+  semanticCommitScope: "deps",
+  packageRules: [
+    {
+      matchManagers: ["npm"],
+      matchDepTypes: ["devDependencies"],
+      groupName: "dev dependencies",
+    },
+    {
+      matchManagers: ["github-actions"],
+      groupName: "GitHub Actions",
+    },
+  ],
+}

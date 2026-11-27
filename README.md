@@ -10,6 +10,18 @@ A lightweight Chrome (Manifest V3) extension that integrates directly into `http
 - **Rich metadata & naming**: embeds iTunes tags (`©nam`, `©ART`, `©alb`, `aART`, `©wrt`, `trkn`, `disk`, `rtng`, `plID`, `atID`, `----` custom tags), cover art (`covr`), and line- or word-timed LRC lyrics (`©lyr`, with optional translation/pronunciation) with separate customizable templates for albums/songs (`Apple Music/{albumArtist}/{album}/{songNumber:02}. {title}.m4a`) and playlists (`Apple Music/Playlists/{playlistName}/{playlistIndex:02}. {title}.m4a`, while keeping each track's real album tags).
 - **Extension popup & options**: inspect active/queued downloads, cancel or retry individual jobs, test wrapper connectivity & regions, and tune quality, lyrics, cover, concurrency, and filename templates.
 
+## Install
+
+1. Download `amdl-extension-vX.Y.Z.zip` from the latest [GitHub Release](https://github.com/LYJW131/amdl-extension/releases/latest) and unzip it (it contains an `amdl-extension/` folder; keep it in a permanent location).
+2. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and select the `amdl-extension/` folder.
+3. To update, unzip the new release over the same folder and click **Reload** on the extension card.
+
+The extension UI follows Chrome's language (English, 简体中文, 日本語); in-page controls follow the Apple Music page language.
+
+## Releases
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please): Conventional Commits on `main` keep a release PR up to date (version in `package.json`, `CHANGELOG.md`). Merging it tags `vX.Y.Z`, creates the GitHub Release and attaches the extension zip with `SHA256SUMS`. The manifest version is stamped from `package.json` at build time.
+
 ## Build & Load Unpacked
 
 ```bash
@@ -51,6 +63,7 @@ Requires either a local Rust toolchain with `wasm32-unknown-unknown` or Docker (
 pnpm typecheck
 pnpm test
 pnpm build
+pnpm package   # release/amdl-extension-v<version>.zip + SHA256SUMS
 ```
 
 ### Node Reference CLI
