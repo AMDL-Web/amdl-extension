@@ -24,6 +24,7 @@ import { getUiStrings } from "./i18n.ts";
 const HEADER_BTN_ATTR = "data-amdl-header";
 const ROW_BTN_ATTR = "data-amdl-row";
 const ROW_CELL_ATTR = "data-amdl-row-cell";
+const HEADER_ANCHOR_ATTR = "data-amdl-header-anchor";
 const MENU_ITEM_ATTR = "data-amdl-menu-item";
 const STYLE_ATTR = "data-amdl-styles";
 const INSTANCE_ATTR = "data-amdl-instance";
@@ -69,6 +70,11 @@ function removeInjectedDom(onlyOwnInstance: boolean): void {
       cell.removeAttribute("data-amdl-active");
     }
   }
+  for (const anchor of document.querySelectorAll(`[${HEADER_ANCHOR_ATTR}]`)) {
+    if (!anchor.querySelector(`[${HEADER_BTN_ATTR}]`)) {
+      anchor.removeAttribute(HEADER_ANCHOR_ATTR);
+    }
+  }
 }
 
 removeInjectedDom(false);
@@ -95,6 +101,16 @@ function isInvalidatedError(err: unknown): boolean {
 
 // Scoped stylesheet using Apple Music's own CSS variables & currentColor.
 const INJECTED_CSS = `
+  [${HEADER_ANCHOR_ATTR}="1"] {
+    position: relative;
+  }
+  button[${HEADER_BTN_ATTR}][data-amdl-abs="1"] {
+    position: absolute !important;
+    top: 50%;
+    left: calc(100% + 12px);
+    transform: translateY(-50%);
+    margin: 0 !important;
+  }
   button[${HEADER_BTN_ATTR}] {
     margin-inline-start: 12px;
     flex: 0 0 auto;
@@ -151,50 +167,26 @@ const INJECTED_CSS = `
     cursor: not-allowed;
   }
 
-  .songs-list-row__add-to-library[${ROW_CELL_ATTR}="1"] {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 2px;
-    width: auto !important;
-    min-width: 28px;
-    height: 28px;
-    transition: opacity 0.12s ease;
+  /* Row buttons are absolutely positioned inside the native controls grid so they never
+     create a grid track or change any column width / row height. */
+  [${ROW_CELL_ATTR}="1"] {
+    position: relative;
   }
   [data-testid="track-list-item"]:not(:hover):not(:focus-within)
-    .songs-list-row__add-to-library[${ROW_CELL_ATTR}="1"]:not([data-amdl-active="true"]) {
-    opacity: 0;
-  }
-  [data-testid="track-list-item"]:hover .songs-list-row__add-to-library[${ROW_CELL_ATTR}="1"],
-  [data-testid="track-list-item"]:focus-within .songs-list-row__add-to-library[${ROW_CELL_ATTR}="1"],
-  .songs-list-row__add-to-library[${ROW_CELL_ATTR}="1"][data-amdl-active="true"] {
-    opacity: 1 !important;
-  }
-  [data-testid="track-list-item"]:not(:hover):not(:focus-within)
-    .songs-list-row__add-to-library[${ROW_CELL_ATTR}="1"][data-amdl-active="true"]
-    > :not([${ROW_BTN_ATTR}]) {
+    button[${ROW_BTN_ATTR}]:not([data-state="working"]):not([data-state="done"]):not([data-state="error"]) {
     opacity: 0;
     pointer-events: none;
   }
 
-  .songs-list-row__context-menu[${ROW_CELL_ATTR}="1"] {
-    display: inline-flex !important;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 2px;
-    width: auto !important;
-  }
-  [data-testid="track-list-item"]:not(:hover):not(:focus-within)
-    .songs-list-row__context-menu[${ROW_CELL_ATTR}="1"]
-    > button[${ROW_BTN_ATTR}]:not([data-state="working"]):not([data-state="done"]):not([data-state="error"]) {
-    opacity: 0;
-  }
-
   button[${ROW_BTN_ATTR}] {
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    transform: translateY(-50%);
     width: 28px;
     height: 28px;
     padding: 0;
-    margin: 0;
+    margin: 0 2px 0 0;
     border: 0;
     border-radius: 50%;
     background: transparent;
@@ -902,6 +894,12 @@ function mountHeaderButton(route: PageRoute): void {
         .filter((c) => c && c !== "is-in-library")
         .join(" ");
       btn.className = clonedClasses;
+      // Absolutely positioned next to the native button so the header grid keeps its size.
+      cloudButtons.setAttribute(HEADER_ANCHOR_ATTR, "1");
+      btn.setAttribute("data-amdl-abs", "1");
+      // Align vertically with the native button regardless of the container's box.
+      btn.style.top = `${(nativeAddBtn as HTMLElement).offsetTop}px`;
+      btn.style.transform = "none";
       nativeAddBtn.insertAdjacentElement("afterend", btn);
     } else if (route.type === "song") {
       const songBtns = headerRoot.querySelector(".song-header-page__buttons");
@@ -926,6 +924,9 @@ function mountHeaderButton(route: PageRoute): void {
         }
       }
       btn.style.marginInlineStart = "0";
+      ctaCell.setAttribute(HEADER_ANCHOR_ATTR, "1");
+      btn.setAttribute("data-amdl-abs", "1");
+      btn.style.left = "0";
       ctaCell.appendChild(btn);
     }
 
@@ -972,7 +973,10 @@ function mountRowButton(args: {
   const ctxCell = controls.querySelector<HTMLElement>(
     ".songs-list-row__context-menu",
   );
-  const targetCell = addCell || ctxCell;
+  // Mount on the native controls grid itself (absolutely positioned, left of the
+  // add-to-library cell) so no grid track, column width or row height changes.
+  const targetCell =
+    (addCell || ctxCell)?.parentElement ?? (controls.firstElementChild as HTMLElement | null);
   if (!targetCell) return;
 
   const key = args.unavailable
@@ -1035,19 +1039,7 @@ function mountRowButton(args: {
       });
     });
 
-    if (addCell) {
-      // Primary: inside `.songs-list-row__add-to-library`, right after any native add-to-library button.
-      addCell.appendChild(btn);
-    } else {
-      // Fallback when Apple omits `.songs-list-row__add-to-library` (e.g. preview-mode rows):
-      // inside `.songs-list-row__context-menu`, right before the ••• trigger without adding a grid cell.
-      const menuTrigger = targetCell.querySelector("amp-contextual-menu-button");
-      if (menuTrigger) {
-        targetCell.insertBefore(btn, menuTrigger);
-      } else {
-        targetCell.appendChild(btn);
-      }
-    }
+    targetCell.appendChild(btn);
     mountedButtons.add(ref);
     updateRowButtonVisual(ref);
   });
