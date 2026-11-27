@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/AMDL-Web/amdl-extension/compare/v0.1.0...v0.1.1) (2026-11-27)
+
+
+### Documentation
+
+* point release links at the AMDL-Web organization ([050403a](https://github.com/AMDL-Web/amdl-extension/commit/050403ad9773682a55357f7d7395695001d3e910))
+
 ## 0.1.0 (2026-11-27)
 
 
