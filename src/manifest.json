@@ -26,7 +26,8 @@
     "declarativeNetRequestWithHostAccess",
     "downloads",
     "storage",
-    "cookies"
+    "cookies",
+    "scripting"
   ],
   "host_permissions": [
     "https://music.apple.com/*",

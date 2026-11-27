@@ -179,9 +179,37 @@ async function revokeBlobInOffscreen(blobUrl: string): Promise<void> {
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => {
+async function injectContentScriptsIntoOpenTabs(): Promise<void> {
+  try {
+    const tabs = await chrome.tabs.query({ url: "https://music.apple.com/*" });
+    await Promise.allSettled(
+      tabs
+        .filter((t) => t.id !== undefined)
+        .map(async (tab) => {
+          const tabId = tab.id!;
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            files: ["content/main-world.js"],
+            world: "MAIN",
+          });
+          await chrome.scripting.executeScript({
+            target: { tabId },
+            files: ["content/inject.js"],
+            world: "ISOLATED",
+          });
+        }),
+    );
+  } catch {
+    // Ignore tabs that cannot be scripted (discarded, navigating, etc.).
+  }
+}
+
+chrome.runtime.onInstalled.addListener((details) => {
   dnrInstalled = false;
   void ensureAppleDnrRule();
+  if (details.reason === "install" || details.reason === "update") {
+    void injectContentScriptsIntoOpenTabs();
+  }
 });
 
 chrome.runtime.onStartup.addListener(() => {
@@ -208,7 +236,12 @@ chrome.runtime.onMessage.addListener((rawMsg: unknown, _sender, sendResponse) =>
   switch (msg.type) {
     case "enqueue-song":
     case "enqueue-album":
-    case "resolve-album": {
+    case "enqueue-library-album":
+    case "enqueue-playlist":
+    case "enqueue-library-playlist":
+    case "resolve-album":
+    case "resolve-collection":
+    case "resolve-library-lockup": {
       void (async () => {
         const tokens = await enrichTokensWithCookie(msg.tokens);
         return forwardToOffscreen({ ...msg, tokens }, tokens);
