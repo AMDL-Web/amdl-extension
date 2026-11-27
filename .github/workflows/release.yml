@@ -4,6 +4,10 @@ name: Release
 # main (version bump in package.json + CHANGELOG.md). Merging that PR tags
 # vX.Y.Z and creates the GitHub Release; the build job then attaches the
 # extension zip and its SHA256SUMS.
+#
+# release-please acts as the lyjw131[bot] GitHub App: the AMDL-Web
+# organization does not let GITHUB_TOKEN open pull requests, and PRs opened by
+# an App token (unlike GITHUB_TOKEN) also trigger CI.
 on:
   push:
     branches: [main]
@@ -11,7 +15,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   release-please:
@@ -20,9 +23,18 @@ jobs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
+      - uses: actions/create-github-app-token@v3
+        id: app
+        with:
+          client-id: Iv23liSmKTDKh0bxIfzB
+          private-key: ${{ secrets.LYJW131_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - id: release
         uses: googleapis/release-please-action@v5
         with:
+          token: ${{ steps.app.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
