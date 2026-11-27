@@ -9,7 +9,8 @@
     "build:wasm": "bash scripts/build-wasm.sh",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "cli": "node scripts/cli.ts"
+    "cli": "node scripts/cli.ts",
+    "package": "node scripts/package.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.310",
@@ -19,6 +20,12 @@
     "vitest": "^3.1.4"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=22.18"
   }
 }
