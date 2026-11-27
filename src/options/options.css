@@ -1,26 +1,36 @@
 :root {
-  --bg: #f5f5f7;
+  /* amdl.dev design tokens (apps/site) */
+  color-scheme: light;
+  --bg: #fffdf7;
   --card: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
-  --text: #1d1d1f;
-  --muted: #6e6e73;
-  --accent: #fa233b;
-  --ok: #1f9d45;
-  --err: #d93025;
+  --border: #dce4db;
+  --text: #172723;
+  --muted: #52635a;
+  --accent: #004aad;
+  --accent-hover: #003b8b;
+  --accent-soft: #d3e3f9;
+  --ok: #1d4f2a;
+  --err: #b42318;
   --input-bg: #ffffff;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-display: "Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #141416;
-    --card: #1e1e21;
-    --border: rgba(255, 255, 255, 0.12);
-    --text: #f5f5f7;
-    --muted: #98989d;
-    --accent: #ff375f;
-    --ok: #30d158;
-    --err: #ff453a;
-    --input-bg: #2a2a2e;
+    color-scheme: dark;
+    --bg: #0e1412;
+    --card: #151d1b;
+    --border: #24302c;
+    --text: #e6ece8;
+    --muted: #9aaba2;
+    --accent: #2f6fdf;
+    --accent-hover: #3d7cf0;
+    --accent-soft: #1c2a3d;
+    --ok: #62d69a;
+    --err: #ff8a80;
+    --input-bg: #101816;
   }
 }
 
@@ -32,7 +42,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -44,9 +54,12 @@ body {
 }
 
 .page-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0 0 6px;
-  font-size: 24px;
-  font-weight: 700;
+  font: 600 26px/1.1 var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 .subtitle {
@@ -169,7 +182,7 @@ input:disabled {
   padding: 6px 10px;
   border-radius: 6px;
   background: var(--bg);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--muted);
   word-break: break-all;
@@ -177,11 +190,10 @@ input:disabled {
 
 .btn {
   height: 36px;
-  padding: 0 14px;
+  padding: 0 16px;
   border-radius: 8px;
-  border: 1px solid var(--border);
-  font-size: 13px;
-  font-weight: 600;
+  border: 0;
+  font: 500 14px/1 var(--font-sans);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -193,12 +205,12 @@ input:disabled {
 }
 
 .btn.secondary {
-  background: var(--bg);
+  background: var(--accent-soft);
   color: var(--text);
 }
 
-.btn:hover {
-  opacity: 0.92;
+.btn.secondary:hover {
+  filter: brightness(0.97);
 }
 
 .actions {
@@ -219,6 +231,21 @@ input:disabled {
 }
 
 code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
+}
+
+.page-header h1 .mark {
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
+}
+
+.btn.primary:hover {
+  background: var(--accent-hover);
 }

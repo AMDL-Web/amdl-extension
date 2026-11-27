@@ -1,26 +1,41 @@
 :root {
-  --bg: #ffffff;
-  --surface: #f5f5f7;
-  --border: rgba(0, 0, 0, 0.08);
-  --text: #1d1d1f;
-  --muted: #6e6e73;
-  --accent: #fa233b;
-  --ok: #1f9d45;
-  --err: #d93025;
-  --warn: #b45309;
+  /* amdl.dev design tokens (apps/site) */
+  color-scheme: light;
+  --bg: #fffdf7;
+  --surface: #ffffff;
+  --border: #dce4db;
+  --border-strong: #b9c6bb;
+  --text: #172723;
+  --muted: #52635a;
+  --accent: #004aad;
+  --accent-hover: #003b8b;
+  --accent-soft: #d3e3f9;
+  --accent-soft-ink: #004aad;
+  --ok: #1d4f2a;
+  --ok-soft: #d4efd5;
+  --err: #b42318;
+  --warn: #7a3f1f;
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-display: "Geist", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1c1c1e;
-    --surface: #2c2c2e;
-    --border: rgba(255, 255, 255, 0.1);
-    --text: #f5f5f7;
-    --muted: #98989d;
-    --accent: #ff375f;
-    --ok: #30d158;
-    --err: #ff453a;
-    --warn: #ffd60a;
+    color-scheme: dark;
+    --bg: #0e1412;
+    --surface: #151d1b;
+    --border: #24302c;
+    --border-strong: #3a4843;
+    --text: #e6ece8;
+    --muted: #9aaba2;
+    --accent: #8ab4ff;
+    --accent-hover: #bcd3ff;
+    --accent-soft: #1c2a3d;
+    --accent-soft-ink: #bcd3ff;
+    --ok: #62d69a;
+    --ok-soft: rgba(98, 214, 154, 0.14);
+    --err: #ff8a80;
+    --warn: #f2c9ad;
   }
 }
 
@@ -37,7 +52,7 @@ body {
   flex-direction: column;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
 }
 
@@ -55,18 +70,17 @@ body {
   gap: 7px;
 }
 
-.brand .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
+.brand .mark {
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: none;
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font: 600 16px/1 var(--font-display);
+  letter-spacing: -0.02em;
 }
 
 .topbar-actions {
@@ -90,6 +104,7 @@ body {
 
 .badge.ok {
   color: var(--ok);
+  background: var(--ok-soft);
 }
 
 .badge.err {
@@ -111,7 +126,14 @@ body {
 }
 
 .icon-btn:hover {
-  border-color: var(--accent);
+  border-color: var(--border-strong);
+  color: var(--accent);
+}
+
+.icon-btn svg {
+  width: 15px;
+  height: 15px;
+  display: block;
 }
 
 .queue-list {
