@@ -4,10 +4,10 @@ A lightweight Chrome (Manifest V3) extension that integrates directly into `http
 
 ## Features
 
-- **In-page controls on `music.apple.com`**: injects Shadow-DOM-isolated download buttons into album headers, song headers, and individual track rows with live progress rings, completion badges, and retry states.
+- **Native-feeling in-page controls on `music.apple.com`**: places icon-only download buttons right next to Apple Music's native library controls in catalog & library album headers, catalog & library playlist headers, song headers, track rows (hover/active reveal with zero row-height shift), and `•••` / right-click context menus (including track rows, page headers, sidebar pins, and `/library/albums` & `/library/recently-added` lockup grids), localised automatically (`zh-Hans`, `zh-Hant`, `ja`, `en`) and theme-matched to light/dark mode.
 - **Zero-config AAC-LC mode (default)**: works out of the box when signed in to `music.apple.com`. Uses your browser session (`MusicKit` / `media-user-token`) + pure-TypeScript Widevine L3 CDM & CENC AES-128-CTR on WebCrypto + pure-TypeScript fMP4→M4A flattening & iTunes tagging to download 256 kbps AAC-LC tracks.
 - **Optional Wrapper mode (full quality unlocked)**: configure a wrapper endpoint (e.g. `http://wrapper.lan`, with optional Bearer token) in Extension Options to unlock codec/quality selection (`alac` up to 24-bit/192 kHz, `aac`, `aac-binaural`, `aac-downmix`, `ec3` Dolby Atmos, `ac3`, and `aac-lc` fallback), powered by a multi-worker Rust `temari-wasm` (66 KiB) FairPlay decryptor pool.
-- **Rich metadata & naming**: embeds iTunes tags (`©nam`, `©ART`, `©alb`, `aART`, `©wrt`, `trkn`, `disk`, `rtng`, `plID`, `atID`, `----` custom tags), cover art (`covr`), and line- or word-timed LRC lyrics (`©lyr`, with optional translation/pronunciation) with customizable filename templates.
+- **Rich metadata & naming**: embeds iTunes tags (`©nam`, `©ART`, `©alb`, `aART`, `©wrt`, `trkn`, `disk`, `rtng`, `plID`, `atID`, `----` custom tags), cover art (`covr`), and line- or word-timed LRC lyrics (`©lyr`, with optional translation/pronunciation) with separate customizable templates for albums/songs (`Apple Music/{albumArtist}/{album}/{songNumber:02}. {title}.m4a`) and playlists (`Apple Music/Playlists/{playlistName}/{playlistIndex:02}. {title}.m4a`, while keeping each track's real album tags).
 - **Extension popup & options**: inspect active/queued downloads, cancel or retry individual jobs, test wrapper connectivity & regions, and tune quality, lyrics, cover, concurrency, and filename templates.
 
 ## Build & Load Unpacked
@@ -34,9 +34,9 @@ Requires either a local Rust toolchain with `wasm32-unknown-unknown` or Docker (
 ### Zero-config (No Wrapper)
 
 1. Sign in to `https://music.apple.com`.
-2. Navigate to any album or song page.
-3. Click **Download** (header) or the circular download icon on any track row.
-4. Track progress in the row badge or the extension popup; files save directly via Chrome's download manager.
+2. Navigate to any catalog album, library album (`/library/albums/...`), catalog playlist, library playlist (`/library/playlist/...`), song page, or library grid (`/library/albums`, `/library/recently-added`).
+3. Click the circular **Download** icon next to the Add to Library button (header), hover a track row to click its row download icon, or open any `•••` / right-click context menu and choose **Download** / **Download album** / **Download playlist**.
+4. Track progress in the subtle progress ring or the extension popup; files save directly via Chrome's download manager. Note: user-uploaded library tracks without an Apple Music catalog match are skipped and reported.
 
 ### Wrapper Mode (ALAC / Atmos / FairPlay)
 

@@ -35,6 +35,12 @@ decisions built on top of it. Reference code lives read-only in `/home/lyjw/Proj
     `track_1720704575_s1` (9,354 B) byte-for-byte identically to `.pt`.
   - Note: `decrypt_samples` export takes `(handle, buf_ptr, buf_len, table_ptr, count) -> i32` (adding `buf_len` for
     strict bounds checking inside Rust).
+- **Library, playlist, and native UI findings verified live (2026-11-27, logged-in throwaway Chromium):**
+  - **Library album** (`/library/albums/l.<id>` or `/{sf}/library/albums/l.<id>`): `GET /v1/me/library/albums/{id}?include=catalog,tracks&l=<lang>` (Web JWT + `Media-User-Token`) returns `data[0].relationships.catalog.data[0] = {type:"albums", id}` and `relationships.tracks.data[]` (`library-songs` with `attributes.playParams.catalogId`).
+  - **Library playlist** (`/library/playlist/p.<id>` or `/{sf}/library/playlist/p.<id>`): web player redirects bare `/library/...` URLs to `/us/library/...` and `MusicKit.getInstance().storefrontId` temporarily reflects `"us"`, NOT the user's account storefront — library lookups must resolve the real account storefront via `/v1/me/storefront` (cached by token SHA-256). Metadata lives at `GET /v1/me/library/playlists/{id}?l=`, tracks at `GET /v1/me/library/playlists/{id}/tracks?limit=100` (paginated via `next`, `meta.total`, `404` on empty playlist). Tracks lacking `playParams.catalogId` (user uploads) are skipped and reported as unavailable in the Apple Music catalog.
+  - **Catalog playlist** (`/{sf}/playlist/{slug?}/pl.<id>`): `GET /v1/catalog/{sf}/playlists/{id}?include=tracks&l=<lang>` + `allTrackPages` (Web JWT only, non-`songs` items such as `music-videos` skipped).
+  - **Layout constraints**: `[data-testid="container-detail-header"] .primary-actions` is a fixed `display: grid` (`gap: 12px`); adding a new grid child wraps the library button onto a second row. The native add/delete-from-library button lives in `.primary-actions__button--add-to-library [data-testid="cloud-buttons"]` (`display: flex`), so cloning its Svelte classes and inserting our icon-only download button as its next sibling keeps the header on a single line. Track row `.songs-list-row__controls` is `display: inline-grid`; inserting our icon button inside the existing `.songs-list-row__add-to-library` cell (or `.songs-list-row__context-menu` fallback on preview-mode rows that omit the add cell) preserves exact native row height (46 px album / 54 px playlist).
+  - **Context menus & library grids**: Apple renders `amp-contextual-menu` in light DOM under `document.body` (`ul.contextual-menu__list[role="menu"]` containing `amp-contextual-menu-item > li.contextual-menu-item`) and marks the active trigger button with `aria-expanded="true"`. On `/library/albums` and `/library/recently-added`, lockup `product-lockup-link` anchors use `href="#"`, and Apple's web player requests `/v1/me/library/*` with `format[resources]=map` (placing attributes under `resources["library-albums"]` / `resources["library-playlists"]`); `main-world.ts` passively indexes those responses (matching lockups by artwork stem or title/subtitle, with an offscreen API fallback).
 
 ## 1. Component layout
 
@@ -132,11 +138,16 @@ Port of `experiments/browser/engine/engine.go` `Run`:
    Tags = `engine/song.go` `buildTags` (go-mp4tag atom layout as in `tags.go`), cover `covr`, lyrics `©lyr` (LRC from
    TTML via a port of `engine/lyrics.go`).
 8. **Save**: offscreen `URL.createObjectURL(blob)` → SW `chrome.downloads.download({url, filename, conflictAction:
-   "uniquify", saveAs})` → revoke on `onChanged` complete/interrupted. Default filename template
-   `Apple Music/{albumArtist}/{album}/{songNumber:02}. {title}.m4a` (sanitised as `safeName`).
+   "uniquify", saveAs})` → revoke on `onChanged` complete/interrupted. Default filename template:
+   `Apple Music/{albumArtist}/{album}/{songNumber:02}. {title}.m4a` (sanitised as `safeName`). Playlist downloads
+   use `playlistFilenameTemplate` (default `Apple Music/Playlists/{playlistName}/{playlistIndex:02}. {title}.m4a`)
+   while keeping embedded MP4 tags describing the song's real album (`album`, `trackNumber`, etc. unchanged).
 
-Queue: tracks run with configurable concurrency (default 2), album enqueue expands to tracks; per-job cancel/retry.
-Job state is broadcast as `{jobId, songId, title, stage, done, total, error?, notes[]}`.
+Queue: tracks run with configurable concurrency (default 2), collection enqueues expand to tracks; per-job
+cancel/retry. Job de-duplication keys on `songId` + destination path template/context (`buildJobDedupKey`) so the
+same song downloaded via its album can still be downloaded into a playlist folder (and vice versa), while repeated
+clicks on the same context stay de-duplicated. Job state is broadcast as
+`{jobId, songId, dedupKey, title, playlistContext?, stage, done, total, error?, notes[]}`.
 
 ## 5. FairPlay: `temari-wasm` + worker pool
 
@@ -178,20 +189,50 @@ keep attribution in file headers), using WebCrypto only:
 
 ## 7. UI
 
-- **Injection** (`content/inject.ts`): SPA-aware (`navigation` API `navigatesuccess` + URL polling fallback +
-  `MutationObserver` scoped to `main`). Routes: `/{sf}/album/{slug?}/{id}`, `/{sf}/song/{slug?}/{id}`,
-  `/{sf}/album/...?...i={songId}`, playlist pages later.
-  - Header: "Download" button appended to `[data-testid="container-detail-header"] .primary-actions` on album pages
-    (album → all tracks) and `.song-header-page__buttons` on song pages (song → that track).
-  - Track rows: small download icon inserted into `[data-testid="track-column-controls"]`; row → song id resolved from
-    `a[href*="/song/"]`, falling back to `a[href*="i="]` and `data-row` index against the album's track list fetched
-    once through the offscreen (`resolveAlbum`). Per-row progress ring + done/error state from job broadcasts.
-  - Shadow-DOM-isolated styles, follows page dark/light (`prefers-color-scheme`), no layout shift.
-- **Popup**: mode badge (Zero-config AAC-LC / Wrapper: regions), current queue with progress, cancel/retry, clear.
+Governing principle: **every native library action control gets a native-looking download control right next to it**,
+without altering Apple Music's grid structure, row height, typography, or light/dark theme palette.
+
+- **Injection & lifecycle** (`content/inject.ts`, `content/main-world.ts`):
+  - SPA-aware (`navigation` API `navigatesuccess` + `popstate` + URL polling fallback + `MutationObserver` on
+    `document.body`). Scan scheduling uses a `setTimeout` fallback paired with `requestAnimationFrame` when visible
+    plus `visibilitychange` re-scan so background/headless tabs never stall.
+  - On `chrome.runtime.onInstalled` (`install` / `update`), the SW injects `content/main-world.js` (`MAIN`) and
+    `content/inject.js` (`ISOLATED`) into already-open `https://music.apple.com/*` tabs via `chrome.scripting`.
+    Each `inject.ts` instance stamps a unique `data-amdl-instance` ID, cleans up stale DOM from invalidated previous
+    instances at boot, and tears down only its own nodes and observers cleanly on `Extension context invalidated`.
+  - **Hardening**: all injected click handlers require `event.isTrusted === true` (blocking synthetic clicks
+    dispatched by Apple's own scripts), isolate pointer/key propagation on header/row controls, and guard collection
+    enqueues against concurrent double-clicks.
+  - **Supported detail routes**: `/{sf}/album/{slug?}/{id}` (optional `?i={songId}`), `/{sf}/song/{slug?}/{id}`,
+    `/{sf}/playlist/{slug?}/pl.{id}`, `/library/albums/l.{id}` (with optional `/{sf}` prefix), and
+    `/library/playlist/p.{id}` (with optional `/{sf}` prefix). Query parameters such as `?l=en-GB` are stripped.
+  - **Header**: icon-only circle button inserted inside `.primary-actions__button--add-to-library [data-testid="cloud-buttons"]`
+    immediately after the native add/delete-from-library button, cloning its Svelte classes so size, tint, border,
+    and hover match natively on a single line (falling back to the existing empty `--cta-button` cell only when no
+    library button container exists, or `.song-header-page__buttons` on song pages). `aria-label` and `title` are set
+    immediately and localised by `document.documentElement.lang` (`zh-Hans`, `zh-Hant`, `ja`, default `en`).
+  - **Track rows**: subtle icon button placed inside `.songs-list-row__add-to-library` (falling back to
+    `.songs-list-row__context-menu` before `amp-contextual-menu-button` on preview-mode rows that omit the add cell)
+    so no grid tracks are added and row height stays unchanged. Hidden until row hover/focus-within unless the track
+    has an active, done, or error job state.
+  - **Context menus (`amp-contextual-menu`)**: injected into top-level `ul.contextual-menu__list` immediately after
+    the native "Add to Library" / "Delete from Library" item (or immediately before "Copy Link" when no library item
+    is present), cloning native `<li class="contextual-menu-item">` markup and preserving native keyboard navigation.
+    Covers track rows, detail headers, sidebar pins/playlists, catalog lockups, and `/library/albums` &
+    `/library/recently-added` grid lockups (resolved via `main-world.ts` passive `format[resources]=map` indexing +
+    offscreen fallback). Clicking enqueues the subject and closes the menu via the scrim button / `Escape`.
+  - **Visual states**: idle = download glyph (`currentColor`); working = subtle `currentColor` progress ring around
+    the glyph; done = stroke checkmark glyph; error = `var(--systemRed, #ff453a)` tint + `title` tooltip.
+  - **Out of scope (not implemented in this round)**: `/library/songs` (virtualized `library-track` rows carry no
+    song IDs), `/library/recently-added` song-level inline rows (grid album/playlist lockup context menus *are*
+    supported), artist pages, and music videos.
+- **Popup**: mode badge (Zero-config AAC-LC / Wrapper: regions), current queue with progress (showing playlist name
+  and index on playlist downloads), cancel/retry, clear.
 - **Options**: wrapper URL + token (+ "Test connection" → `/status` regions), codec select (disabled without wrapper),
   ALAC max sample rate (44100/48000/96000/192000) & bit depth (16/24), fallback toggle, lyrics (embed, line/word,
-  translation/pronunciation extras), cover (embed, size, jpg/png), filename template, concurrency, save-as prompt.
-  Settings in `chrome.storage.local` (single `settings` object with schema version).
+  translation/pronunciation extras), cover (embed, size, jpg/png), album/song filename template, playlist filename
+  template (`playlistFilenameTemplate`), concurrency, save-as prompt. Settings in `chrome.storage.local` (single
+  `settings` object with schema version).
 
 ## 8. Build, tests, verification
 
