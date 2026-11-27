@@ -143,7 +143,7 @@ Port of `experiments/browser/engine/engine.go` `Run`:
    use `playlistFilenameTemplate` (default `Apple Music/Playlists/{playlistName}/{playlistIndex:02}. {title}.m4a`)
    while keeping embedded MP4 tags describing the song's real album (`album`, `trackNumber`, etc. unchanged).
 
-Queue: tracks run with configurable concurrency (default 2), collection enqueues expand to tracks; per-job
+Queue: tracks run with configurable concurrency (default 4), collection enqueues expand to tracks; per-job
 cancel/retry. Job de-duplication keys on `songId` + destination path template/context (`buildJobDedupKey`) so the
 same song downloaded via its album can still be downloaded into a playlist folder (and vice versa), while repeated
 clicks on the same context stay de-duplicated. Job state is broadcast as

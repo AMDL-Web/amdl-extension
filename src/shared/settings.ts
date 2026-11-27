@@ -42,14 +42,14 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   maxBitDepth: 24,
   fallbackOnCodecNotFound: true,
   embedLyrics: true,
-  lyricsTiming: "line",
-  lyricsExtras: [],
+  lyricsTiming: "word",
+  lyricsExtras: ["translation"],
   embedCover: true,
-  coverSize: "1400x1400",
+  coverSize: "5000x5000",
   coverFormat: "jpg",
   filenameTemplate: DEFAULT_FILENAME_TEMPLATE,
   playlistFilenameTemplate: DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
-  concurrency: 2,
+  concurrency: 4,
   saveAs: false,
   language: "",
 };
@@ -81,12 +81,14 @@ export function sanitizeSettings(raw: unknown): ExtensionSettings {
       ? s.maxBitDepth
       : DEFAULT_SETTINGS.maxBitDepth;
   const lyricsTiming: LyricsTiming =
-    s.lyricsTiming === "word" ? "word" : "line";
+    s.lyricsTiming === "word" || s.lyricsTiming === "line"
+      ? s.lyricsTiming
+      : DEFAULT_SETTINGS.lyricsTiming;
   const lyricsExtras: LyricsExtra[] = Array.isArray(s.lyricsExtras)
     ? s.lyricsExtras.filter(
         (x): x is LyricsExtra => x === "translation" || x === "pronunciation",
       )
-    : [];
+    : [...DEFAULT_SETTINGS.lyricsExtras];
   const coverFormat: CoverFormat = s.coverFormat === "png" ? "png" : "jpg";
   const concurrency =
     typeof s.concurrency === "number" && Number.isFinite(s.concurrency)
