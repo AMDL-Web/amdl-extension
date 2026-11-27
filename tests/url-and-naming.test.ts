@@ -1,12 +1,20 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_FILENAME_TEMPLATE,
+  DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
   albumSongNumbers,
+  buildJobDedupKey,
+  buildUiJobKey,
   defaultTrackFileName,
   formatDownloadPath,
   safeName,
 } from "../src/core/naming.ts";
 import type { Song } from "../src/core/types.ts";
-import { parseAppleMusicUrl, parseSongRef } from "../src/core/url.ts";
+import {
+  extractSongRefFromHref,
+  parseAppleMusicUrl,
+  parseSongRef,
+} from "../src/core/url.ts";
 
 describe("URL parsing", () => {
   it("parses song, album, album?i=, playlist, artist, station, music-video", () => {
@@ -42,12 +50,97 @@ describe("URL parsing", () => {
       id: "1783644604",
     });
 
+    expect(
+      parseAppleMusicUrl(
+        "https://music.apple.com/cn/playlist/pl.f4d106fed2bd41149aaacabb233eb5eb?l=en-GB",
+      ),
+    ).toMatchObject({
+      storefront: "cn",
+      type: "playlist",
+      id: "pl.f4d106fed2bd41149aaacabb233eb5eb",
+    });
+
     expect(() =>
       parseAppleMusicUrl("https://example.com/cn/song/123"),
     ).toThrow(/unsupported host/);
     expect(() =>
       parseAppleMusicUrl("https://music.apple.com/usa/song/123"),
     ).toThrow(/invalid storefront/);
+  });
+
+  it("parses library album and library playlist URLs with or without storefront prefix and strips query strings", () => {
+    expect(
+      parseAppleMusicUrl("https://music.apple.com/library/albums/l.ViWYEme"),
+    ).toMatchObject({
+      storefront: "",
+      type: "library-album",
+      id: "l.ViWYEme",
+    });
+
+    expect(
+      parseAppleMusicUrl(
+        "https://music.apple.com/us/library/albums/l.ViWYEme?l=en-GB",
+      ),
+    ).toMatchObject({
+      storefront: "",
+      type: "library-album",
+      id: "l.ViWYEme",
+    });
+
+    expect(
+      parseAppleMusicUrl(
+        "https://music.apple.com/library/playlist/p.omUlzXO1KA",
+      ),
+    ).toMatchObject({
+      storefront: "",
+      type: "library-playlist",
+      id: "p.omUlzXO1KA",
+    });
+
+    expect(
+      parseAppleMusicUrl(
+        "https://music.apple.com/us/library/playlist/p.omUlzXO1KA?l=en-GB",
+      ),
+    ).toMatchObject({
+      storefront: "",
+      type: "library-playlist",
+      id: "p.omUlzXO1KA",
+    });
+
+    // Out-of-scope library pages must not parse as downloadable collections
+    expect(() =>
+      parseAppleMusicUrl("https://music.apple.com/library/songs"),
+    ).toThrow();
+    expect(() =>
+      parseAppleMusicUrl("https://music.apple.com/us/library/recently-added"),
+    ).toThrow();
+    expect(() =>
+      parseAppleMusicUrl("https://music.apple.com/library/albums"),
+    ).toThrow();
+    expect(() =>
+      parseAppleMusicUrl("https://music.apple.com/us/library/playlist"),
+    ).toThrow();
+  });
+
+  it("extractSongRefFromHref strips query strings from /song/ and /album/?i= links", () => {
+    expect(
+      extractSongRefFromHref(
+        "https://music.apple.com/cn/song/some-title/1818784494?l=en-GB",
+      ),
+    ).toEqual({ songId: "1818784494", storefront: "cn" });
+
+    expect(
+      extractSongRefFromHref(
+        "https://music.apple.com/cn/album/some-album/1818784232?i=1818784494&l=en-GB",
+      ),
+    ).toEqual({ songId: "1818784494", storefront: "cn" });
+
+    expect(extractSongRefFromHref("/cn/song/1783644604?l=zh-Hans")).toEqual({
+      songId: "1783644604",
+      storefront: "cn",
+    });
+
+    expect(extractSongRefFromHref("#")).toBeNull();
   });
 
   it("parseSongRef handles bare ids, song URLs, album?i= URLs, and rejects bare albums", () => {
@@ -95,7 +188,7 @@ describe("naming", () => {
     expect(albumSongNumbers([mk(1, 1), mk(1, 1)])).toEqual([1, 2]);
   });
 
-  it("formats download paths safely from templates", () => {
+  it("formats album and playlist download paths safely from templates", () => {
     expect(defaultTrackFileName(3, "EMIYA / #LEGACY")).toBe(
       "03. EMIYA _ #LEGACY.m4a",
     );
@@ -113,5 +206,99 @@ describe("naming", () => {
         },
       ),
     ).toBe("Apple Music/ReoNa/生命線 _ EP/01. 生命線.m4a");
+
+    expect(
+      formatDownloadPath(DEFAULT_PLAYLIST_FILENAME_TEMPLATE, {
+        albumArtist: "NOMELON NOLEMON",
+        artist: "NOMELON NOLEMON",
+        album: "HALO - EP",
+        title: "HALO",
+        songNumber: 3,
+        trackNumber: 3,
+        discNumber: 1,
+        playlistName: "My / Favs: 2026",
+        playlistIndex: 7,
+      }),
+    ).toBe("Apple Music/Playlists/My _ Favs_ 2026/07. HALO.m4a");
+
+    expect(
+      formatDownloadPath(DEFAULT_PLAYLIST_FILENAME_TEMPLATE, {
+        albumArtist: "A",
+        artist: "A",
+        album: "B",
+        title: "Track 105",
+        songNumber: 1,
+        trackNumber: 1,
+        discNumber: 1,
+        playlistName: "Big List",
+        playlistIndex: 105,
+      }),
+    ).toBe("Apple Music/Playlists/Big List/105. Track 105.m4a");
+  });
+
+  it("keys job deduplication on songId + destination context", () => {
+    const albumKey = buildJobDedupKey({
+      songId: "1818784494",
+      filenameTemplate: DEFAULT_FILENAME_TEMPLATE,
+    });
+    const sameAlbumKey = buildJobDedupKey({
+      songId: "1818784494",
+      filenameTemplate: DEFAULT_FILENAME_TEMPLATE,
+    });
+    const pl1Key = buildJobDedupKey({
+      songId: "1818784494",
+      filenameTemplate: DEFAULT_FILENAME_TEMPLATE,
+      playlistFilenameTemplate: DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
+      playlistContext: { playlistName: "Favourite Songs", playlistIndex: 4 },
+    });
+    const pl1SameSlotKey = buildJobDedupKey({
+      songId: "1818784494",
+      filenameTemplate: DEFAULT_FILENAME_TEMPLATE,
+      playlistFilenameTemplate: DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
+      playlistContext: { playlistName: "Favourite Songs", playlistIndex: 4 },
+    });
+    const pl1OtherSlotKey = buildJobDedupKey({
+      songId: "1818784494",
+      filenameTemplate: DEFAULT_FILENAME_TEMPLATE,
+      playlistFilenameTemplate: DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
+      playlistContext: { playlistName: "Favourite Songs", playlistIndex: 9 },
+    });
+    const pl2Key = buildJobDedupKey({
+      songId: "1818784494",
+      filenameTemplate: DEFAULT_FILENAME_TEMPLATE,
+      playlistFilenameTemplate: DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
+      playlistContext: { playlistName: "Workout", playlistIndex: 4 },
+    });
+
+    // Double clicks in same context match
+    expect(albumKey).toBe(sameAlbumKey);
+    expect(pl1Key).toBe(pl1SameSlotKey);
+
+    // Album vs playlist, different playlists, and different slots are distinct
+    expect(albumKey).not.toBe(pl1Key);
+    expect(pl1Key).not.toBe(pl2Key);
+    expect(pl1Key).not.toBe(pl1OtherSlotKey);
+
+    // UI lookup keys mirror context separation and match across DOM/API playlist title locales when playlistId is present
+    expect(buildUiJobKey("1818784494")).not.toBe(
+      buildUiJobKey("1818784494", {
+        playlistId: "p.omUlzXO1KA",
+        playlistName: "Favourite Songs",
+        playlistIndex: 4,
+      }),
+    );
+    expect(
+      buildUiJobKey("1818784494", {
+        playlistId: "p.omUlzXO1KA",
+        playlistName: "Favourite Songs",
+        playlistIndex: 4,
+      }),
+    ).toBe(
+      buildUiJobKey("1818784494", {
+        playlistId: "p.omUlzXO1KA",
+        playlistName: "喜爱歌曲",
+        playlistIndex: 4,
+      }),
+    );
   });
 });

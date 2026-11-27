@@ -162,7 +162,7 @@
         <section class="card">
           <h2>Downloads</h2>
           <div class="field">
-            <label for="filename-template">Filename Template</label>
+            <label for="filename-template">Album / Song Filename Template</label>
             <input id="filename-template" type="text" spellcheck="false" />
             <p class="hint">
               Variables: <code>{albumArtist}</code>, <code>{artist}</code>,
@@ -171,6 +171,17 @@
               <code>{title}</code>, <code>{codec}</code>
             </p>
             <p id="template-preview" class="preview"></p>
+          </div>
+
+          <div class="field">
+            <label for="playlist-filename-template">Playlist Filename Template</label>
+            <input id="playlist-filename-template" type="text" spellcheck="false" />
+            <p class="hint">
+              Variables: <code>{playlistName}</code>, <code>{playlistIndex:02}</code>,
+              <code>{artist}</code>, <code>{albumArtist}</code>,
+              <code>{album}</code>, <code>{title}</code>, <code>{codec}</code>
+            </p>
+            <p id="playlist-template-preview" class="preview"></p>
           </div>
 
           <div class="grid-2">

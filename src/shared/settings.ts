@@ -1,4 +1,7 @@
-import { DEFAULT_FILENAME_TEMPLATE } from "../core/naming.ts";
+import {
+  DEFAULT_FILENAME_TEMPLATE,
+  DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
+} from "../core/naming.ts";
 import type {
   Codec,
   CoverFormat,
@@ -24,6 +27,7 @@ export interface ExtensionSettings {
   coverSize: string;
   coverFormat: CoverFormat;
   filenameTemplate: string;
+  playlistFilenameTemplate: string;
   concurrency: number;
   saveAs: boolean;
   language: string;
@@ -44,6 +48,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   coverSize: "1400x1400",
   coverFormat: "jpg",
   filenameTemplate: DEFAULT_FILENAME_TEMPLATE,
+  playlistFilenameTemplate: DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
   concurrency: 2,
   saveAs: false,
   language: "",
@@ -119,6 +124,11 @@ export function sanitizeSettings(raw: unknown): ExtensionSettings {
       typeof s.filenameTemplate === "string" && s.filenameTemplate.trim()
         ? s.filenameTemplate.trim()
         : DEFAULT_FILENAME_TEMPLATE,
+    playlistFilenameTemplate:
+      typeof s.playlistFilenameTemplate === "string" &&
+      s.playlistFilenameTemplate.trim()
+        ? s.playlistFilenameTemplate.trim()
+        : DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
     concurrency,
     saveAs: Boolean(s.saveAs),
     language: typeof s.language === "string" ? s.language.trim() : "",

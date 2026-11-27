@@ -1,9 +1,19 @@
-import { AppleApi } from "../core/apple-api.ts";
+import {
+  AppleApi,
+  type LibraryLockupRecord,
+} from "../core/apple-api.ts";
+import {
+  type PlaylistContext,
+  buildJobDedupKey,
+} from "../core/naming.ts";
 import { runPipeline } from "../core/pipeline.ts";
 import { createConsoleLogger } from "../core/types.ts";
 import { createWidevineAacLcHandler } from "../core/widevine/cenc.ts";
 import { WrapperClient } from "../core/wrapper-client.ts";
 import type {
+  AlbumTrackSummary,
+  CollectionKind,
+  EnqueueCollectionResponse,
   JobSnapshot,
   OffscreenForwardEnvelope,
   PageTokens,
@@ -26,9 +36,13 @@ const memoryTokens: PageTokens = {};
 let wrapperClient: WrapperClient | null = null;
 let wrapperClientKey = "";
 
-const albumCache = new Map<
+const collectionCache = new Map<
   string,
   { summary: ResolvedAlbumSummary; expiresAt: number }
+>();
+const libraryLockupCache = new Map<
+  string,
+  { items: LibraryLockupRecord[]; expiresAt: number }
 >();
 
 const fairPlayPool = new FairPlayWorkerPool({
@@ -100,6 +114,7 @@ function getWrapperClient(settings: ExtensionSettings): WrapperClient | undefine
 interface InternalJob {
   snapshot: JobSnapshot;
   controller: AbortController;
+  initialNotes: string[];
 }
 
 const jobs = new Map<string, InternalJob>();
@@ -144,11 +159,15 @@ function updateJob(
   return job.snapshot;
 }
 
-function findActiveJobForSong(songId: string): InternalJob | undefined {
+function effectiveCodec(): string {
+  const wrapper = getWrapperClient(currentSettings);
+  return wrapper ? currentSettings.codec : "aac-lc";
+}
+
+function findDuplicateJob(dedupKey: string): InternalJob | undefined {
   for (const j of jobs.values()) {
     if (
-      j.snapshot.songId === songId &&
-      j.snapshot.stage !== "done" &&
+      j.snapshot.dedupKey === dedupKey &&
       j.snapshot.stage !== "error" &&
       j.snapshot.stage !== "cancelled"
     ) {
@@ -158,33 +177,64 @@ function findActiveJobForSong(songId: string): InternalJob | undefined {
   return undefined;
 }
 
+async function resolveAccountStorefront(): Promise<string> {
+  const mut = memoryTokens.musicUserToken?.trim();
+  if (mut) {
+    try {
+      const sf = await appleApi.accountStorefront(mut);
+      if (sf) return sf.toLowerCase();
+    } catch (err) {
+      logger.warn("accountStorefront lookup failed; falling back", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return memoryTokens.storefrontId?.trim().toLowerCase() || "cn";
+}
+
 function enqueueSongJob(args: {
   storefront: string;
   songId: string;
   titleHint?: string;
   artistHint?: string;
+  playlistContext?: PlaylistContext;
+  initialNotes?: string[];
 }): JobSnapshot {
-  const existing = findActiveJobForSong(args.songId);
+  const dedupKey = buildJobDedupKey({
+    songId: args.songId,
+    filenameTemplate: currentSettings.filenameTemplate,
+    playlistFilenameTemplate: currentSettings.playlistFilenameTemplate,
+    playlistContext: args.playlistContext,
+    codec: effectiveCodec(),
+  });
+  const existing = findDuplicateJob(dedupKey);
   if (existing) {
     return existing.snapshot;
   }
   const now = Date.now();
   const jobId = `job-${now}-${nextJobSeq++}`;
+  const initialNotes = args.initialNotes ? [...args.initialNotes] : [];
   const snapshot: JobSnapshot = {
     jobId,
     songId: args.songId,
+    dedupKey,
     storefront: args.storefront || memoryTokens.storefrontId || "cn",
     title: args.titleHint || `Track ${args.songId}`,
     artist: args.artistHint,
+    ...(args.playlistContext ? { playlistContext: args.playlistContext } : {}),
     stage: "queued",
     message: "Queued",
     done: 0,
     total: 0,
-    notes: [],
+    notes: [...initialNotes],
     createdAt: now,
     updatedAt: now,
   };
-  const job: InternalJob = { snapshot, controller: new AbortController() };
+  const job: InternalJob = {
+    snapshot,
+    controller: new AbortController(),
+    initialNotes,
+  };
   jobs.set(jobId, job);
   pendingQueue.push(jobId);
   broadcastJob(snapshot);
@@ -228,6 +278,8 @@ async function runJob(job: InternalJob): Promise<void> {
       coverSize: settings.coverSize,
       coverFormat: settings.coverFormat,
       filenameTemplate: settings.filenameTemplate,
+      playlistFilenameTemplate: settings.playlistFilenameTemplate,
+      playlistContext: job.snapshot.playlistContext,
       appleApi,
       wrapper,
       fairPlayDecryptor: fairPlayPool,
@@ -250,13 +302,14 @@ async function runJob(job: InternalJob): Promise<void> {
       return;
     }
 
+    const mergedNotes = [...job.initialNotes, ...result.notes];
     updateJob(job, {
       title: result.song.name,
       artist: result.song.artist,
       album: result.song.album,
       codec: result.stream.codec,
       fileName: result.fileName,
-      notes: result.notes,
+      notes: mergedNotes,
       stage: "saving",
       message: "Saving file",
       done: result.totalSize,
@@ -301,33 +354,268 @@ async function runJob(job: InternalJob): Promise<void> {
   }
 }
 
-async function resolveAlbumSummary(
+async function resolveCollectionSummary(
+  kind: CollectionKind,
   storefront: string,
-  albumId: string,
+  id: string,
 ): Promise<ResolvedAlbumSummary> {
-  const sf = storefront.toLowerCase();
-  const key = `${sf}:${albumId}`;
-  const cached = albumCache.get(key);
+  const isLibrary = kind === "library-album" || kind === "library-playlist";
+  const sf = isLibrary
+    ? await resolveAccountStorefront()
+    : storefront.toLowerCase();
+  const key = `${kind}:${sf}:${id}`;
+  const cached = collectionCache.get(key);
   if (cached && Date.now() < cached.expiresAt) {
     return cached.summary;
   }
   const language =
     currentSettings.language || memoryTokens.language || "zh-Hans_CN";
-  const album = await appleApi.album(sf, albumId, language);
-  const summary: ResolvedAlbumSummary = {
-    id: album.id,
-    name: album.name,
-    artist: album.artist,
-    tracks: album.tracks.map((t) => ({
-      id: t.id,
+
+  let summary: ResolvedAlbumSummary;
+
+  if (kind === "album") {
+    const album = await appleApi.album(sf, id, language);
+    summary = {
+      id: album.id,
+      kind: "album",
+      storefront: sf,
+      name: album.name,
+      artist: album.artist,
+      tracks: album.tracks.map((t, idx) => ({
+        id: t.id,
+        name: t.name,
+        artistName: t.artistName,
+        trackNumber: t.trackNumber,
+        discNumber: t.discNumber,
+        playlistIndex: idx + 1,
+      })),
+      skippedUnavailableCount: 0,
+      skippedNonSongCount: 0,
+    };
+  } else if (kind === "library-album") {
+    const mut = memoryTokens.musicUserToken?.trim() || "";
+    const libAlbum = await appleApi.libraryAlbum(mut, id, language);
+    let tracks: AlbumTrackSummary[] = libAlbum.tracks.map((t) => ({
+      id: t.catalogId ?? "",
+      libraryId: t.libraryId,
       name: t.name,
       artistName: t.artistName,
       trackNumber: t.trackNumber,
       discNumber: t.discNumber,
-    })),
-  };
-  albumCache.set(key, { summary, expiresAt: Date.now() + 10 * 60 * 1000 });
+      playlistIndex: t.playlistIndex,
+      unavailableInCatalog: t.unavailableInCatalog,
+      nonSong: t.kind !== "song",
+    }));
+    let skippedUnavailableCount = tracks.filter(
+      (t) => t.unavailableInCatalog,
+    ).length;
+    let skippedNonSongCount = tracks.filter((t) => t.nonSong).length;
+
+    if (libAlbum.catalogAlbumId) {
+      try {
+        const catAlbum = await appleApi.album(
+          sf,
+          libAlbum.catalogAlbumId,
+          language,
+        );
+        if (catAlbum.tracks.length > 0) {
+          tracks = catAlbum.tracks.map((t, idx) => ({
+            id: t.id,
+            name: t.name,
+            artistName: t.artistName,
+            trackNumber: t.trackNumber,
+            discNumber: t.discNumber,
+            playlistIndex: idx + 1,
+          }));
+          skippedUnavailableCount = 0;
+          skippedNonSongCount = 0;
+        }
+      } catch (err) {
+        logger.warn(
+          "catalog album lookup for library album failed; falling back to library track catalogIds",
+          {
+            libraryAlbumId: id,
+            catalogAlbumId: libAlbum.catalogAlbumId,
+            error: err instanceof Error ? err.message : String(err),
+          },
+        );
+      }
+    }
+
+    summary = {
+      id: libAlbum.id,
+      kind: "library-album",
+      storefront: sf,
+      name: libAlbum.name,
+      artist: libAlbum.artist,
+      catalogAlbumId: libAlbum.catalogAlbumId,
+      tracks,
+      skippedUnavailableCount,
+      skippedNonSongCount,
+    };
+  } else if (kind === "playlist") {
+    const pl = await appleApi.playlist(sf, id, language);
+    const tracks = pl.tracks.map((t) => ({
+      id: t.catalogId ?? "",
+      name: t.name,
+      artistName: t.artistName,
+      trackNumber: t.trackNumber,
+      discNumber: t.discNumber,
+      playlistIndex: t.playlistIndex,
+      unavailableInCatalog: false,
+      nonSong: t.kind !== "song",
+    }));
+    summary = {
+      id: pl.id,
+      kind: "playlist",
+      storefront: sf,
+      name: pl.name,
+      artist: pl.artist,
+      tracks,
+      skippedUnavailableCount: 0,
+      skippedNonSongCount: tracks.filter((t) => t.nonSong).length,
+    };
+  } else {
+    const mut = memoryTokens.musicUserToken?.trim() || "";
+    const pl = await appleApi.libraryPlaylist(mut, id, language);
+    const tracks = pl.tracks.map((t) => ({
+      id: t.catalogId ?? "",
+      libraryId: t.libraryId,
+      name: t.name,
+      artistName: t.artistName,
+      trackNumber: t.trackNumber,
+      discNumber: t.discNumber,
+      playlistIndex: t.playlistIndex,
+      unavailableInCatalog: t.unavailableInCatalog,
+      nonSong: t.kind !== "song",
+    }));
+    summary = {
+      id: pl.id,
+      kind: "library-playlist",
+      storefront: sf,
+      name: pl.name,
+      artist: pl.artist,
+      tracks,
+      skippedUnavailableCount: tracks.filter((t) => t.unavailableInCatalog)
+        .length,
+      skippedNonSongCount: tracks.filter((t) => t.nonSong).length,
+    };
+  }
+
+  collectionCache.set(key, { summary, expiresAt: Date.now() + 10 * 60 * 1000 });
   return summary;
+}
+
+function normalizeArtworkStem(url: string): string {
+  if (!url) return "";
+  const m = url.match(/\/image\/thumb\/([^?]+?)(?:\/\d+x\d+[^/?]*|\/\{w\}x\{h\}[^/?]*)?$/i);
+  if (m?.[1]) return m[1].toLowerCase();
+  const m2 = url.match(/\/([^/]+\.(?:jpg|jpeg|png|webp))(?=\/|$|\?)/i);
+  return m2?.[1]?.toLowerCase() ?? "";
+}
+
+async function resolveLibraryLockup(args: {
+  source: "albums" | "recently-added";
+  title: string;
+  subtitle?: string;
+  artworkStem?: string;
+}): Promise<{ kind: "library-album" | "library-playlist"; id: string; name: string } | null> {
+  const mut = memoryTokens.musicUserToken?.trim() || "";
+  if (!mut) return null;
+  const language =
+    currentSettings.language || memoryTokens.language || "zh-Hans_CN";
+  const cacheKey = `${args.source}:${language}`;
+  let entry = libraryLockupCache.get(cacheKey);
+  if (!entry || Date.now() >= entry.expiresAt) {
+    const items = await appleApi.libraryLockupItems(mut, args.source, language);
+    entry = { items, expiresAt: Date.now() + 2 * 60 * 1000 };
+    libraryLockupCache.set(cacheKey, entry);
+  }
+
+  const wantedStem = (args.artworkStem || "").toLowerCase();
+  const wantedTitle = args.title.trim().toLowerCase();
+  const wantedSub = (args.subtitle || "").trim().toLowerCase();
+
+  if (wantedStem) {
+    const byArt = entry.items.find(
+      (it) => normalizeArtworkStem(it.artworkUrl) === wantedStem,
+    );
+    if (byArt) return { kind: byArt.kind, id: byArt.id, name: byArt.name };
+  }
+  if (wantedTitle && wantedSub) {
+    const exact = entry.items.find(
+      (it) =>
+        it.name.trim().toLowerCase() === wantedTitle &&
+        it.artistName.trim().toLowerCase() === wantedSub,
+    );
+    if (exact) return { kind: exact.kind, id: exact.id, name: exact.name };
+  }
+  if (wantedTitle) {
+    const byTitle = entry.items.find(
+      (it) => it.name.trim().toLowerCase() === wantedTitle,
+    );
+    if (byTitle) return { kind: byTitle.kind, id: byTitle.id, name: byTitle.name };
+  }
+  return null;
+}
+
+function enqueueSummaryTracks(
+  summary: ResolvedAlbumSummary,
+  isPlaylist: boolean,
+): EnqueueCollectionResponse {
+  const sf = summary.storefront || "cn";
+  const downloadable = summary.tracks.filter((t) => Boolean(t.id) && !t.nonSong);
+  const skippedCount = summary.skippedUnavailableCount ?? 0;
+  const skippedNonSongCount = summary.skippedNonSongCount ?? 0;
+  const skippedNote =
+    skippedCount > 0
+      ? `Skipped ${skippedCount} track${skippedCount === 1 ? "" : "s"} not available in the Apple Music catalog`
+      : "";
+
+  if (downloadable.length === 0) {
+    const message =
+      skippedCount > 0
+        ? `No downloadable tracks (${skippedCount} not available in the Apple Music catalog)`
+        : "No downloadable tracks found";
+    return {
+      ok: true,
+      jobs: [],
+      collection: summary,
+      skippedCount,
+      skippedNonSongCount,
+      totalCount: summary.tracks.length,
+      message,
+    };
+  }
+
+  const queued = downloadable.map((t, i) =>
+    enqueueSongJob({
+      storefront: sf,
+      songId: t.id,
+      titleHint: t.name,
+      artistHint: t.artistName,
+      ...(isPlaylist
+        ? {
+            playlistContext: {
+              playlistId: summary.id,
+              playlistName: summary.name || "Playlist",
+              playlistIndex: t.playlistIndex ?? i + 1,
+            },
+          }
+        : {}),
+      ...(i === 0 && skippedNote ? { initialNotes: [skippedNote] } : {}),
+    }),
+  );
+
+  return {
+    ok: true,
+    jobs: queued,
+    collection: summary,
+    skippedCount,
+    skippedNonSongCount,
+    totalCount: summary.tracks.length,
+    ...(skippedNote ? { message: skippedNote } : {}),
+  };
 }
 
 async function handlePayload(
@@ -342,37 +630,106 @@ async function handlePayload(
     }
     case "enqueue-song": {
       mergeTokens(payload.tokens);
+      const storefront =
+        payload.useAccountStorefront || !payload.storefront
+          ? await resolveAccountStorefront()
+          : payload.storefront.toLowerCase();
+      let playlistContext = payload.playlistContext;
+      // Canonicalize playlist name via the cached collection summary so row clicks
+      // and header clicks always share the same destination folder & dedupKey
+      // even when the DOM renders a different locale title than the Apple API.
+      if (playlistContext?.playlistId) {
+        const plKind: CollectionKind = payload.useAccountStorefront
+          ? "library-playlist"
+          : "playlist";
+        try {
+          const summary = await resolveCollectionSummary(
+            plKind,
+            storefront,
+            playlistContext.playlistId,
+          );
+          if (summary.name) {
+            playlistContext = {
+              ...playlistContext,
+              playlistName: summary.name,
+            };
+          }
+        } catch {
+          // Keep DOM-provided playlistName fallback on lookup error.
+        }
+      }
       const snapshot = enqueueSongJob({
-        storefront: payload.storefront,
+        storefront,
         songId: payload.songId,
         titleHint: payload.titleHint,
         artistHint: payload.artistHint,
+        playlistContext,
       });
       return { ok: true, job: snapshot };
     }
     case "resolve-album": {
       mergeTokens(payload.tokens);
-      const summary = await resolveAlbumSummary(
+      const summary = await resolveCollectionSummary(
+        "album",
         payload.storefront,
         payload.albumId,
       );
       return { ok: true, album: summary };
     }
+    case "resolve-collection": {
+      mergeTokens(payload.tokens);
+      const summary = await resolveCollectionSummary(
+        payload.kind,
+        payload.storefront,
+        payload.id,
+      );
+      return { ok: true, collection: summary };
+    }
+    case "resolve-library-lockup": {
+      mergeTokens(payload.tokens);
+      const match = await resolveLibraryLockup({
+        source: payload.source,
+        title: payload.title,
+        subtitle: payload.subtitle,
+        artworkStem: payload.artworkStem,
+      });
+      return { ok: true, match };
+    }
     case "enqueue-album": {
       mergeTokens(payload.tokens);
-      const summary = await resolveAlbumSummary(
+      const summary = await resolveCollectionSummary(
+        "album",
         payload.storefront,
         payload.albumId,
       );
-      const queued = summary.tracks.map((t) =>
-        enqueueSongJob({
-          storefront: payload.storefront,
-          songId: t.id,
-          titleHint: t.name,
-          artistHint: t.artistName,
-        }),
+      return enqueueSummaryTracks(summary, false);
+    }
+    case "enqueue-library-album": {
+      mergeTokens(payload.tokens);
+      const summary = await resolveCollectionSummary(
+        "library-album",
+        "",
+        payload.libraryAlbumId,
       );
-      return { ok: true, jobs: queued };
+      return enqueueSummaryTracks(summary, false);
+    }
+    case "enqueue-playlist": {
+      mergeTokens(payload.tokens);
+      const summary = await resolveCollectionSummary(
+        "playlist",
+        payload.storefront,
+        payload.playlistId,
+      );
+      return enqueueSummaryTracks(summary, true);
+    }
+    case "enqueue-library-playlist": {
+      mergeTokens(payload.tokens);
+      const summary = await resolveCollectionSummary(
+        "library-playlist",
+        "",
+        payload.libraryPlaylistId,
+      );
+      return enqueueSummaryTracks(summary, true);
     }
     case "get-jobs": {
       const list = Array.from(jobs.values())
@@ -405,7 +762,7 @@ async function handlePayload(
         done: 0,
         total: 0,
         error: undefined,
-        notes: [],
+        notes: [...job.initialNotes],
       });
       pendingQueue.push(payload.jobId);
       pumpQueue();

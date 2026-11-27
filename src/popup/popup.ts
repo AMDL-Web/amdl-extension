@@ -30,7 +30,7 @@ function renderJobs(): void {
   );
 
   if (jobs.length === 0) {
-    queueList.innerHTML = `<div class="empty">No active downloads.<br/>Open an album or song on <strong>music.apple.com</strong> and click Download.</div>`;
+    queueList.innerHTML = `<div class="empty">No active downloads.<br/>Open an album, playlist, or song on <strong>music.apple.com</strong> and click Download.</div>`;
     queueSummary.textContent = "No downloads";
     clearBtn.disabled = true;
     return;
@@ -75,6 +75,11 @@ function renderJobs(): void {
 
     const metaParts: string[] = [];
     if (j.artist) metaParts.push(j.artist);
+    if (j.playlistContext?.playlistName) {
+      metaParts.push(
+        `${j.playlistContext.playlistName} #${String(j.playlistContext.playlistIndex).padStart(2, "0")}`,
+      );
+    }
     if (j.codec) metaParts.push(j.codec.toUpperCase());
 
     const rightStatus =

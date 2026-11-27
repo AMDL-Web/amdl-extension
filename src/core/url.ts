@@ -2,12 +2,15 @@ export type AppleUrlType =
   | "song"
   | "album"
   | "playlist"
+  | "library-album"
+  | "library-playlist"
   | "artist"
   | "music-video"
   | "station";
 
 export interface ParsedAppleUrl {
   raw: string;
+  /** Empty string for library URLs (whose path prefix is not the account storefront). */
   storefront: string;
   type: AppleUrlType;
   id: string;
@@ -22,7 +25,30 @@ const SUPPORTED_HOSTS = new Set([
   "classical.music.apple.com",
 ]);
 const LINK_SHAPE =
-  "expected https://music.apple.com/{storefront}/{album|song|playlist|artist|station|music-video}/...";
+  "expected https://music.apple.com/{storefront}/{album|song|playlist|artist|station|music-video}/... or /library/{albums|playlist}/...";
+
+function parseLibrarySubPath(
+  raw: string,
+  subKind: string | undefined,
+  tailParts: string[],
+): ParsedAppleUrl {
+  const id = decodeURIComponent(tailParts[tailParts.length - 1] ?? "").trim();
+  if (!id) {
+    throw new Error("invalid Apple Music library URL");
+  }
+  switch (subKind) {
+    case "albums":
+    case "album":
+      return { raw, storefront: "", type: "library-album", id };
+    case "playlist":
+    case "playlists":
+      return { raw, storefront: "", type: "library-playlist", id };
+    default:
+      throw new Error(
+        `unsupported Apple Music library URL type "${String(subKind ?? "")}"`,
+      );
+  }
+}
 
 export function parseAppleMusicUrl(
   raw: string,
@@ -44,10 +70,26 @@ export function parseAppleMusicUrl(
   if (parts.length < 3) {
     throw new Error("invalid Apple Music URL");
   }
+
+  // Library URLs without storefront prefix: /library/albums/l.xxx, /library/playlist/p.xxx
+  if (parts[0] === "library") {
+    return parseLibrarySubPath(raw, parts[1], parts.slice(2));
+  }
+
   const storefront = (parts[0] ?? "").toLowerCase();
   if (!STOREFRONT_RE.test(storefront)) {
     throw new Error(`invalid storefront "${storefront}"`);
   }
+
+  // Library URLs with storefront redirect prefix: /{sf}/library/albums/l.xxx, /{sf}/library/playlist/p.xxx
+  // Note: the storefront prefix on library URLs is NOT authoritative for the user's account storefront.
+  if (parts[1] === "library") {
+    if (parts.length < 4) {
+      throw new Error("invalid Apple Music library URL");
+    }
+    return parseLibrarySubPath(raw, parts[2], parts.slice(3));
+  }
+
   const kind = parts[1] as AppleUrlType;
   if (
     u.hostname === "classical.music.apple.com" &&
@@ -55,10 +97,13 @@ export function parseAppleMusicUrl(
   ) {
     throw new Error(`unsupported Apple Music Classical URL type "${kind}"`);
   }
-  const id = parts[parts.length - 1] ?? "";
+  const id = decodeURIComponent(parts[parts.length - 1] ?? "").trim();
+  if (!id) {
+    throw new Error("invalid Apple Music URL");
+  }
   switch (kind) {
     case "album": {
-      const songId = u.searchParams.get("i") ?? "";
+      const songId = (u.searchParams.get("i") ?? "").trim();
       if (songId && albumTrackUrlMode === "song") {
         return {
           raw,
@@ -85,6 +130,41 @@ export function parseAppleMusicUrl(
     default:
       throw new Error(`unsupported Apple Music URL type "${String(kind)}"`);
   }
+}
+
+/**
+ * Extracts a catalog song ID and storefront from an anchor href (either
+ * `/song/<slug>/<id>` or `/album/<slug>/<albumId>?i=<songId>`), ignoring extra
+ * query parameters such as `?l=en-GB`.
+ */
+export function extractSongRefFromHref(
+  href: string,
+  baseOrigin = "https://music.apple.com",
+): { songId: string; storefront: string } | null {
+  try {
+    const resolved = new URL(href, baseOrigin);
+    // Parse `/song/.../<id>` first (query params like ?l=en-GB are ignored by pathname parsing).
+    const parsed = parseAppleMusicUrl(resolved.href, "song");
+    if (parsed.type === "song" && DIGITS_RE.test(parsed.id)) {
+      return { songId: parsed.id, storefront: parsed.storefront };
+    }
+  } catch {
+    // fall through
+  }
+  try {
+    const resolved = new URL(href, baseOrigin);
+    const iParam = (resolved.searchParams.get("i") ?? "").trim();
+    if (iParam && DIGITS_RE.test(iParam)) {
+      const firstSeg = resolved.pathname.replace(/^\/+/, "").split("/")[0]?.toLowerCase() ?? "";
+      return {
+        songId: iParam,
+        storefront: STOREFRONT_RE.test(firstSeg) ? firstSeg : "",
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
 }
 
 export function parseSongRef(

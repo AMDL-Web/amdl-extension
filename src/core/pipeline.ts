@@ -30,6 +30,8 @@ import {
 } from "./mp4/fragments.ts";
 import { buildTags } from "./mp4/tags.ts";
 import {
+  DEFAULT_PLAYLIST_FILENAME_TEMPLATE,
+  type PlaylistContext,
   albumSongNumbers,
   defaultTrackFileName,
   formatDownloadPath,
@@ -87,6 +89,8 @@ export interface PipelineOptions {
   coverSize?: string;
   coverFormat?: CoverFormat;
   filenameTemplate?: string;
+  playlistFilenameTemplate?: string;
+  playlistContext?: PlaylistContext;
   downloadConcurrency?: number;
   signal?: AbortSignal;
   appleApi: AppleApi;
@@ -744,8 +748,11 @@ export async function runPipeline(
   timings.remux = Math.round(performance.now() - t0);
 
   const albumArtist = firstNonEmpty(song.albumArtist, song.artistName);
-  const fileName = opts.filenameTemplate
-    ? formatDownloadPath(opts.filenameTemplate, {
+  const activeTemplate = opts.playlistContext
+    ? opts.playlistFilenameTemplate || DEFAULT_PLAYLIST_FILENAME_TEMPLATE
+    : opts.filenameTemplate;
+  const fileName = activeTemplate
+    ? formatDownloadPath(activeTemplate, {
         albumArtist,
         artist: song.artistName,
         album: song.albumName,
@@ -754,6 +761,8 @@ export async function runPipeline(
         trackNumber: song.trackNumber,
         discNumber: Math.max(1, song.discNumber),
         codec: activeCodec,
+        playlistName: opts.playlistContext?.playlistName,
+        playlistIndex: opts.playlistContext?.playlistIndex,
       })
     : defaultTrackFileName(songNumber, song.name);
 

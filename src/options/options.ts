@@ -39,6 +39,12 @@ const coverSizeEl = $<HTMLSelectElement>("cover-size");
 const coverFormatEl = $<HTMLSelectElement>("cover-format");
 const filenameTemplateEl = $<HTMLInputElement>("filename-template");
 const templatePreviewEl = $<HTMLParagraphElement>("template-preview");
+const playlistFilenameTemplateEl = $<HTMLInputElement>(
+  "playlist-filename-template",
+);
+const playlistTemplatePreviewEl = $<HTMLParagraphElement>(
+  "playlist-template-preview",
+);
 const concurrencyEl = $<HTMLInputElement>("concurrency");
 const saveAsEl = $<HTMLInputElement>("save-as");
 const resetBtn = $<HTMLButtonElement>("reset-btn");
@@ -62,6 +68,7 @@ function syncDisabledStates(): void {
 }
 
 function updateTemplatePreview(): void {
+  const effectiveCodec = wrapperUrlEl.value.trim() ? codecEl.value : "aac-lc";
   const preview = formatDownloadPath(filenameTemplateEl.value, {
     albumArtist: "ReoNa",
     artist: "ReoNa",
@@ -70,9 +77,23 @@ function updateTemplatePreview(): void {
     songNumber: 1,
     trackNumber: 1,
     discNumber: 1,
-    codec: wrapperUrlEl.value.trim() ? codecEl.value : "aac-lc",
+    codec: effectiveCodec,
   });
   templatePreviewEl.textContent = `Preview: ${preview}`;
+
+  const playlistPreview = formatDownloadPath(playlistFilenameTemplateEl.value, {
+    albumArtist: "ReoNa",
+    artist: "ReoNa",
+    album: "月姫 -A piece of blue glass moon- THEME SONG E.P.",
+    title: "生命線",
+    songNumber: 1,
+    trackNumber: 1,
+    discNumber: 1,
+    codec: effectiveCodec,
+    playlistName: "Favourite Songs",
+    playlistIndex: 3,
+  });
+  playlistTemplatePreviewEl.textContent = `Preview: ${playlistPreview}`;
 }
 
 function populateForm(s: ExtensionSettings): void {
@@ -91,6 +112,7 @@ function populateForm(s: ExtensionSettings): void {
   coverSizeEl.value = s.coverSize;
   coverFormatEl.value = s.coverFormat;
   filenameTemplateEl.value = s.filenameTemplate;
+  playlistFilenameTemplateEl.value = s.playlistFilenameTemplate;
   concurrencyEl.value = String(s.concurrency);
   saveAsEl.checked = s.saveAs;
   syncDisabledStates();
@@ -117,6 +139,7 @@ function readForm(): ExtensionSettings {
     coverSize: coverSizeEl.value,
     coverFormat: coverFormatEl.value as CoverFormat,
     filenameTemplate: filenameTemplateEl.value.trim(),
+    playlistFilenameTemplate: playlistFilenameTemplateEl.value.trim(),
     concurrency: Number.parseInt(concurrencyEl.value, 10) || 2,
     saveAs: saveAsEl.checked,
     language: languageEl.value.trim(),
@@ -235,6 +258,7 @@ for (const el of [
   embedLyricsEl,
   embedCoverEl,
   filenameTemplateEl,
+  playlistFilenameTemplateEl,
 ]) {
   el.addEventListener("input", () => {
     syncDisabledStates();

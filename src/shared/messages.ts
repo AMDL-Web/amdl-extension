@@ -1,3 +1,4 @@
+import type { PlaylistContext } from "../core/naming.ts";
 import type { Codec, PipelineStage } from "../core/types.ts";
 import type { WrapperStatus } from "../core/wrapper-client.ts";
 import type { ExtensionSettings } from "./settings.ts";
@@ -14,10 +15,12 @@ export type JobStage = "queued" | PipelineStage | "saving" | "cancelled";
 export interface JobSnapshot {
   jobId: string;
   songId: string;
+  dedupKey: string;
   storefront: string;
   title: string;
   artist?: string;
   album?: string;
+  playlistContext?: PlaylistContext;
   stage: JobStage;
   message: string;
   done: number;
@@ -30,19 +33,35 @@ export interface JobSnapshot {
   updatedAt: number;
 }
 
+export type CollectionKind =
+  | "album"
+  | "library-album"
+  | "playlist"
+  | "library-playlist";
+
 export interface AlbumTrackSummary {
+  /** Catalog song ID when available; empty string when unavailable in catalog or non-song. */
   id: string;
+  libraryId?: string;
   name: string;
   artistName: string;
   trackNumber: number;
   discNumber: number;
+  playlistIndex?: number;
+  unavailableInCatalog?: boolean;
+  nonSong?: boolean;
 }
 
 export interface ResolvedAlbumSummary {
   id: string;
+  kind?: CollectionKind;
+  storefront?: string;
   name: string;
   artist: string;
+  catalogAlbumId?: string;
   tracks: AlbumTrackSummary[];
+  skippedUnavailableCount?: number;
+  skippedNonSongCount?: number;
 }
 
 export type RuntimeRequest =
@@ -52,6 +71,9 @@ export type RuntimeRequest =
       songId: string;
       titleHint?: string;
       artistHint?: string;
+      playlistContext?: PlaylistContext;
+      /** True when originating from a library page whose URL storefront cannot be trusted. */
+      useAccountStorefront?: boolean;
       tokens?: PageTokens;
     }
   | {
@@ -61,9 +83,40 @@ export type RuntimeRequest =
       tokens?: PageTokens;
     }
   | {
+      type: "enqueue-library-album";
+      libraryAlbumId: string;
+      tokens?: PageTokens;
+    }
+  | {
+      type: "enqueue-playlist";
+      storefront: string;
+      playlistId: string;
+      tokens?: PageTokens;
+    }
+  | {
+      type: "enqueue-library-playlist";
+      libraryPlaylistId: string;
+      tokens?: PageTokens;
+    }
+  | {
       type: "resolve-album";
       storefront: string;
       albumId: string;
+      tokens?: PageTokens;
+    }
+  | {
+      type: "resolve-collection";
+      kind: CollectionKind;
+      storefront: string;
+      id: string;
+      tokens?: PageTokens;
+    }
+  | {
+      type: "resolve-library-lockup";
+      source: "albums" | "recently-added";
+      title: string;
+      subtitle?: string;
+      artworkStem?: string;
       tokens?: PageTokens;
     }
   | { type: "get-jobs" }
@@ -95,5 +148,16 @@ export interface OffscreenForwardEnvelope {
 export interface TestWrapperResponse {
   ok: boolean;
   status?: WrapperStatus;
+  error?: string;
+}
+
+export interface EnqueueCollectionResponse {
+  ok: boolean;
+  jobs?: JobSnapshot[];
+  collection?: ResolvedAlbumSummary;
+  skippedCount?: number;
+  skippedNonSongCount?: number;
+  totalCount?: number;
+  message?: string;
   error?: string;
 }

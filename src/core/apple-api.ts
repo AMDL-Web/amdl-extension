@@ -133,6 +133,13 @@ interface RawAlbumData {
   };
 }
 
+interface RawPlayParams {
+  id?: string;
+  kind?: string;
+  catalogId?: string;
+  isLibrary?: boolean;
+}
+
 interface RawSongData {
   id: string;
   type?: string;
@@ -157,16 +164,104 @@ interface RawSongData {
     };
     audioTraits?: string[];
     url?: string;
+    playParams?: RawPlayParams;
   };
   relationships?: {
     albums?: { data?: RawAlbumData[] };
     artists?: { data?: RawArtistData[] };
+    catalog?: { data?: { id?: string; type?: string }[] };
   };
 }
 
 interface RawSongList {
   data?: RawSongData[];
   next?: string;
+  meta?: { total?: number };
+}
+
+interface RawPlaylistData {
+  id: string;
+  type?: string;
+  attributes?: {
+    name?: string;
+    curatorName?: string;
+    artistName?: string;
+    artwork?: RawArtwork;
+    url?: string;
+    audioTraits?: string[];
+  };
+  relationships?: {
+    tracks?: RawSongList;
+  };
+}
+
+interface RawLibraryAlbumData {
+  id: string;
+  type?: string;
+  attributes?: {
+    name?: string;
+    artistName?: string;
+    trackCount?: number;
+    artwork?: RawArtwork;
+    playParams?: RawPlayParams;
+  };
+  relationships?: {
+    catalog?: { data?: { id?: string; type?: string }[] };
+    tracks?: RawSongList;
+  };
+}
+
+interface RawLibraryCollectionItem {
+  id: string;
+  type?: string;
+  attributes?: {
+    name?: string;
+    artistName?: string;
+    artwork?: RawArtwork;
+    playParams?: RawPlayParams;
+  };
+}
+
+export interface PlaylistTrackEntry {
+  /** 1-based position in the playlist or album track list (matches DOM data-row + 1). */
+  playlistIndex: number;
+  /** Catalog song ID when available; undefined for non-song items or library uploads without catalogId. */
+  catalogId?: string;
+  libraryId?: string;
+  kind: "song" | "non-song";
+  name: string;
+  artistName: string;
+  albumName: string;
+  trackNumber: number;
+  discNumber: number;
+  unavailableInCatalog: boolean;
+}
+
+export interface PlaylistResult {
+  id: string;
+  kind: "playlist" | "library-playlist";
+  name: string;
+  artist: string;
+  artworkUrl: string;
+  url: string;
+  totalCount: number;
+  tracks: PlaylistTrackEntry[];
+}
+
+export interface LibraryAlbumResult {
+  id: string;
+  name: string;
+  artist: string;
+  catalogAlbumId?: string;
+  tracks: PlaylistTrackEntry[];
+}
+
+export interface LibraryLockupRecord {
+  kind: "library-album" | "library-playlist";
+  id: string;
+  name: string;
+  artistName: string;
+  artworkUrl: string;
 }
 
 function mapSong(raw: RawSongData): Song {
@@ -547,17 +642,288 @@ export class AppleApi {
   private async allTrackPages(
     first: RawSongList | undefined,
     signal?: AbortSignal,
+    mediaUserToken?: string,
   ): Promise<RawSongData[]> {
     const tracks: RawSongData[] = [...(first?.data ?? [])];
+    const seenNext = new Set<string>();
     let next = (first?.next ?? "").trim();
-    while (next) {
+    while (next && !seenNext.has(next)) {
+      seenNext.add(next);
       const url = this.catalogNextUrl(next);
-      const resp = await this.doWithWebAuth({ method: "GET", url }, signal);
+      const resp = await this.doWithWebAuth(
+        { method: "GET", url, ...(mediaUserToken ? { mediaUserToken } : {}) },
+        signal,
+      );
       const page = await this.decodeJson<RawSongList>(resp, url);
       tracks.push(...(page.data ?? []));
       next = (page.next ?? "").trim();
     }
     return tracks;
+  }
+
+  private mapLibraryTrackEntry(
+    raw: RawSongData,
+    playlistIndex: number,
+  ): PlaylistTrackEntry {
+    const a = raw.attributes ?? {};
+    const isCatalogSong = raw.type === "songs";
+    const isLibrarySong = raw.type === "library-songs";
+    if (!isCatalogSong && !isLibrarySong) {
+      return {
+        playlistIndex,
+        libraryId: raw.id,
+        kind: "non-song",
+        name: a.name ?? "",
+        artistName: a.artistName ?? "",
+        albumName: a.albumName ?? "",
+        trackNumber: a.trackNumber ?? 0,
+        discNumber: a.discNumber ?? 0,
+        unavailableInCatalog: false,
+      };
+    }
+    const catalogId = isCatalogSong
+      ? raw.id.trim() || undefined
+      : firstNonEmpty(
+          a.playParams?.catalogId,
+          raw.relationships?.catalog?.data?.[0]?.id,
+        ) || undefined;
+    return {
+      playlistIndex,
+      catalogId,
+      libraryId: isLibrarySong ? raw.id : undefined,
+      kind: "song",
+      name: a.name ?? "",
+      artistName: a.artistName ?? "",
+      albumName: a.albumName ?? "",
+      trackNumber: a.trackNumber ?? 0,
+      discNumber: a.discNumber ?? 0,
+      unavailableInCatalog: !catalogId,
+    };
+  }
+
+  async playlist(
+    storefront: string,
+    id: string,
+    language?: string,
+    signal?: AbortSignal,
+  ): Promise<PlaylistResult> {
+    const params = new URLSearchParams({
+      include: "tracks",
+      l: language || this.defaultLanguage,
+    });
+    const url = `${AMP_API_BASE}/v1/catalog/${storefront}/playlists/${id}?${params.toString()}`;
+    const resp = await this.doWithWebAuth({ method: "GET", url }, signal);
+    const body = await this.decodeJson<{ data?: RawPlaylistData[] }>(resp, url);
+    const pl = body.data?.[0];
+    if (!pl) {
+      throw new AppleApiError(`playlist ${id} not found`, {
+        statusCode: 404,
+        path: `/v1/catalog/${storefront}/playlists/${id}`,
+      });
+    }
+    const rawTracks = await this.allTrackPages(pl.relationships?.tracks, signal);
+    const a = pl.attributes ?? {};
+    const tracks: PlaylistTrackEntry[] = rawTracks.map((raw, idx) => {
+      const ta = raw.attributes ?? {};
+      const isSong = raw.type === "songs";
+      return {
+        playlistIndex: idx + 1,
+        catalogId: isSong ? raw.id.trim() || undefined : undefined,
+        kind: isSong ? "song" : "non-song",
+        name: ta.name ?? "",
+        artistName: ta.artistName ?? "",
+        albumName: ta.albumName ?? "",
+        trackNumber: ta.trackNumber ?? 0,
+        discNumber: ta.discNumber ?? 0,
+        unavailableInCatalog: false,
+      };
+    });
+    return {
+      id: pl.id,
+      kind: "playlist",
+      name: a.name ?? "",
+      artist: firstNonEmpty(a.curatorName, a.artistName),
+      artworkUrl: a.artwork?.url ?? "",
+      url: a.url ?? "",
+      totalCount: pl.relationships?.tracks?.meta?.total ?? tracks.length,
+      tracks,
+    };
+  }
+
+  async libraryAlbum(
+    mediaUserToken: string,
+    id: string,
+    language?: string,
+    signal?: AbortSignal,
+  ): Promise<LibraryAlbumResult> {
+    const token = mediaUserToken.trim();
+    if (!token) {
+      throw new Error("Sign in to Apple Music to access library albums.");
+    }
+    const params = new URLSearchParams({
+      include: "catalog,tracks",
+      l: language || this.defaultLanguage,
+    });
+    const url = `${AMP_API_BASE}/v1/me/library/albums/${id}?${params.toString()}`;
+    const resp = await this.doWithWebAuth(
+      { method: "GET", url, mediaUserToken: token },
+      signal,
+    );
+    const body = await this.decodeJson<{ data?: RawLibraryAlbumData[] }>(
+      resp,
+      url,
+    );
+    const album = body.data?.[0];
+    if (!album) {
+      throw new AppleApiError(`library album ${id} not found`, {
+        statusCode: 404,
+        path: `/v1/me/library/albums/${id}`,
+      });
+    }
+    const rawTracks = await this.allTrackPages(
+      album.relationships?.tracks,
+      signal,
+      token,
+    );
+    const catalogData = album.relationships?.catalog?.data?.[0];
+    const catalogAlbumId =
+      catalogData?.id?.trim() ||
+      album.attributes?.playParams?.catalogId?.trim() ||
+      undefined;
+    const a = album.attributes ?? {};
+    const tracks = rawTracks.map((raw, idx) =>
+      this.mapLibraryTrackEntry(raw, idx + 1),
+    );
+    return {
+      id: album.id,
+      name: a.name ?? "",
+      artist: a.artistName ?? "",
+      catalogAlbumId,
+      tracks,
+    };
+  }
+
+  async libraryPlaylist(
+    mediaUserToken: string,
+    id: string,
+    language?: string,
+    signal?: AbortSignal,
+  ): Promise<PlaylistResult> {
+    const token = mediaUserToken.trim();
+    if (!token) {
+      throw new Error("Sign in to Apple Music to access library playlists.");
+    }
+    const lang = language || this.defaultLanguage;
+    const metaParams = new URLSearchParams({ l: lang });
+    const metaUrl = `${AMP_API_BASE}/v1/me/library/playlists/${id}?${metaParams.toString()}`;
+    const metaResp = await this.doWithWebAuth(
+      { method: "GET", url: metaUrl, mediaUserToken: token },
+      signal,
+    );
+    const metaBody = await this.decodeJson<{ data?: RawPlaylistData[] }>(
+      metaResp,
+      metaUrl,
+    );
+    const pl = metaBody.data?.[0];
+    if (!pl) {
+      throw new AppleApiError(`library playlist ${id} not found`, {
+        statusCode: 404,
+        path: `/v1/me/library/playlists/${id}`,
+      });
+    }
+
+    const tracksParams = new URLSearchParams({ limit: "100", l: lang });
+    const tracksUrl = `${AMP_API_BASE}/v1/me/library/playlists/${id}/tracks?${tracksParams.toString()}`;
+    const tracksResp = await this.doWithWebAuth(
+      { method: "GET", url: tracksUrl, mediaUserToken: token },
+      signal,
+    );
+
+    let firstPage: RawSongList = { data: [] };
+    if (tracksResp.status === 404) {
+      // Apple returns 404 for empty library playlists' /tracks endpoint.
+      await tracksResp.text().catch(() => "");
+    } else {
+      firstPage = await this.decodeJson<RawSongList>(tracksResp, tracksUrl);
+    }
+
+    const rawTracks = await this.allTrackPages(firstPage, signal, token);
+    const a = pl.attributes ?? {};
+    const tracks = rawTracks.map((raw, idx) =>
+      this.mapLibraryTrackEntry(raw, idx + 1),
+    );
+    return {
+      id: pl.id,
+      kind: "library-playlist",
+      name: a.name ?? "",
+      artist: a.artistName ?? "",
+      artworkUrl: a.artwork?.url ?? "",
+      url: a.url ?? "",
+      totalCount: firstPage.meta?.total ?? tracks.length,
+      tracks,
+    };
+  }
+
+  /**
+   * Lists library albums or recently-added library collections so context menus
+   * on grid pages whose lockups use `href="#"` can resolve their library IDs.
+   */
+  async libraryLockupItems(
+    mediaUserToken: string,
+    source: "albums" | "recently-added",
+    language?: string,
+    signal?: AbortSignal,
+    maxPages = 6,
+  ): Promise<LibraryLockupRecord[]> {
+    const token = mediaUserToken.trim();
+    if (!token) return [];
+    const lang = language || this.defaultLanguage;
+    const limit = source === "recently-added" ? "10" : "100";
+    const basePath =
+      source === "recently-added"
+        ? "/v1/me/library/recently-added"
+        : "/v1/me/library/albums";
+    const params = new URLSearchParams({ limit, l: lang });
+    let nextUrl: string | null = `${AMP_API_BASE}${basePath}?${params.toString()}`;
+    const seen = new Set<string>();
+    const out: LibraryLockupRecord[] = [];
+    let pages = 0;
+
+    while (nextUrl && pages < maxPages && !seen.has(nextUrl)) {
+      seen.add(nextUrl);
+      pages++;
+      const resp = await this.doWithWebAuth(
+        { method: "GET", url: nextUrl, mediaUserToken: token },
+        signal,
+      );
+      if (!resp.ok) {
+        await resp.text().catch(() => "");
+        break;
+      }
+      const page = (await resp.json()) as {
+        data?: RawLibraryCollectionItem[];
+        next?: string;
+      };
+      for (const item of page.data ?? []) {
+        const kind =
+          item.type === "library-albums"
+            ? "library-album"
+            : item.type === "library-playlists"
+              ? "library-playlist"
+              : null;
+        if (!kind || !item.id) continue;
+        out.push({
+          kind,
+          id: item.id,
+          name: item.attributes?.name ?? "",
+          artistName: item.attributes?.artistName ?? "",
+          artworkUrl: item.attributes?.artwork?.url ?? "",
+        });
+      }
+      const next = (page.next ?? "").trim();
+      nextUrl = next ? this.catalogNextUrl(next) : null;
+    }
+    return out;
   }
 
   async album(
