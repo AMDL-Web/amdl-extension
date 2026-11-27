@@ -156,6 +156,7 @@ const INJECTED_CSS = `
   }
   button[${HEADER_BTN_ATTR}] svg * {
     fill: none !important;
+    stroke: currentColor !important;
   }
   button[${HEADER_BTN_ATTR}][data-state="error"],
   button[${ROW_BTN_ATTR}][data-state="error"] {
@@ -173,7 +174,7 @@ const INJECTED_CSS = `
     position: relative;
   }
   [data-testid="track-list-item"]:not(:hover):not(:focus-within)
-    button[${ROW_BTN_ATTR}]:not([data-state="working"]):not([data-state="done"]):not([data-state="error"]) {
+    button[${ROW_BTN_ATTR}]:not([data-state="working"]):not([data-state="queued"]):not([data-state="done"]):not([data-state="error"]) {
     opacity: 0;
     pointer-events: none;
   }
@@ -204,6 +205,7 @@ const INJECTED_CSS = `
     background: var(--systemQuinary, rgba(128, 128, 128, 0.14));
   }
   button[${ROW_BTN_ATTR}][data-state="working"],
+  button[${ROW_BTN_ATTR}][data-state="queued"],
   button[${ROW_BTN_ATTR}][data-state="done"] {
     color: var(--systemPrimary, currentColor);
   }
@@ -216,21 +218,18 @@ const INJECTED_CSS = `
   }
 
   .amdl-ring-bg {
-    stroke: currentColor;
+    stroke: currentColor !important;
     opacity: 0.25;
   }
   .amdl-ring-fg {
-    stroke: currentColor;
+    stroke: currentColor !important;
     transform: rotate(-90deg);
+    transform-box: fill-box;
     transform-origin: center;
-    transition: stroke-dashoffset 0.15s linear;
+    transition: stroke-dashoffset 0.3s linear;
   }
-  .amdl-spin {
-    animation: amdl-rotate 1s linear infinite;
-    transform-origin: center;
-  }
-  @keyframes amdl-rotate {
-    to { transform: rotate(360deg); }
+  [data-state="queued"] svg[data-amdl-icon="ring"] {
+    opacity: 0.55;
   }
 
   li[${MENU_ITEM_ATTR}] .contextual-menu-item__icon-container svg {
@@ -263,17 +262,57 @@ const ICON_CHECK = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" s
 const ICON_ERROR = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5"/><path d="M8 11h.01"/></svg>`;
 const ICON_MENU_DOWNLOAD = `<svg class="context-menu__option-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.25v7.5"/><path d="M5 7.25 8 10.25l3-3"/><path d="M2.75 11.75v1a1 1 0 0 0 1 1h8.5a1 1 0 0 0 1-1v-1"/></svg>`;
 
-function renderProgressRing(ratio: number | null): string {
-  const r = 6.5;
-  const c = 2 * Math.PI * r;
-  if (ratio === null) {
-    // Indeterminate: rotating partial arc around a miniature download arrow
-    const arc = c * 0.28;
-    return `<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle class="amdl-ring-bg" cx="8" cy="8" r="${r}" stroke-width="1.5"/><circle class="amdl-spin" cx="8" cy="8" r="${r}" stroke="currentColor" stroke-width="1.5" stroke-dasharray="${arc.toFixed(2)} ${(c - arc).toFixed(2)}" stroke-linecap="round"/><path d="M8 5.25v4.5M6.25 8.25 8 10l1.75-1.75" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const RING_R = 6.5;
+const RING_C = 2 * Math.PI * RING_R;
+
+function ringSvg(): string {
+  return `<svg data-amdl-icon="ring" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle class="amdl-ring-bg" cx="8" cy="8" r="${RING_R}" stroke-width="1.5"/><circle class="amdl-ring-fg" cx="8" cy="8" r="${RING_R}" stroke-width="1.5" stroke-dasharray="${RING_C.toFixed(2)}" stroke-dashoffset="${RING_C.toFixed(2)}" stroke-linecap="round"/><path d="M8 5.25v4.5M6.25 8.25 8 10l1.75-1.75" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+/**
+ * Shows a determinate progress ring, updating the existing SVG in place so the
+ * stroke transition stays smooth (no innerHTML churn on every progress tick).
+ */
+function setRing(btn: HTMLButtonElement, ratio: number): void {
+  let svg = btn.querySelector<SVGSVGElement>('svg[data-amdl-icon="ring"]');
+  if (!svg) {
+    btn.innerHTML = ringSvg();
+    svg = btn.querySelector<SVGSVGElement>('svg[data-amdl-icon="ring"]');
   }
-  const clamped = Math.max(0.05, Math.min(1, ratio));
-  const offset = c * (1 - clamped);
-  return `<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle class="amdl-ring-bg" cx="8" cy="8" r="${r}" stroke-width="1.5"/><circle class="amdl-ring-fg" cx="8" cy="8" r="${r}" stroke-width="1.5" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}" stroke-linecap="round"/><path d="M8 5.25v4.5M6.25 8.25 8 10l1.75-1.75" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const fg = svg?.querySelector<SVGCircleElement>(".amdl-ring-fg");
+  if (!fg) return;
+  const clamped = Math.max(0, Math.min(1, ratio));
+  fg.setAttribute("stroke-dashoffset", (RING_C * (1 - clamped)).toFixed(2));
+}
+
+function setIcon(btn: HTMLButtonElement, html: string, kind: string): void {
+  if (btn.querySelector(`svg[data-amdl-icon="${kind}"]`)) return;
+  btn.innerHTML = html.replace("<svg ", `<svg data-amdl-icon="${kind}" `);
+}
+
+/** Overall 0..1 progress of one job across all pipeline stages (monotonic per job). */
+const STAGE_SPAN: Record<string, [number, number]> = {
+  queued: [0, 0],
+  resolve: [0, 0.03],
+  manifest: [0.03, 0.06],
+  download: [0.06, 0.8],
+  keys: [0.8, 0.82],
+  decrypt: [0.82, 0.96],
+  remux: [0.96, 0.98],
+  tag: [0.98, 0.99],
+  saving: [0.99, 1],
+  done: [1, 1],
+};
+const lastProgress = new Map<string, number>();
+
+function jobProgress(job: JobSnapshot): number {
+  const span = STAGE_SPAN[job.stage] ?? [0, 0];
+  const frac = job.total > 0 ? Math.min(1, job.done / job.total) : 0;
+  const value = span[0] + (span[1] - span[0]) * frac;
+  const prev = lastProgress.get(job.jobId) ?? 0;
+  const next = Math.max(prev, value);
+  lastProgress.set(job.jobId, next);
+  return next;
 }
 
 // Runtime state
@@ -471,7 +510,7 @@ function updateRowButtonVisual(ref: ButtonRef): void {
   const t = getUiStrings();
   if (ref.unavailable || !ref.songId) {
     ref.btn.dataset.state = "unavailable";
-    ref.btn.innerHTML = ICON_DOWNLOAD;
+    setIcon(ref.btn, ICON_DOWNLOAD, "download");
     ref.btn.title = t.unavailable;
     ref.btn.setAttribute("aria-label", t.unavailable);
     ref.btn.disabled = true;
@@ -485,7 +524,7 @@ function updateRowButtonVisual(ref: ButtonRef): void {
 
   if (!job || job.stage === "cancelled") {
     ref.btn.dataset.state = "idle";
-    ref.btn.innerHTML = ICON_DOWNLOAD;
+    setIcon(ref.btn, ICON_DOWNLOAD, "download");
     ref.btn.title = t.downloadTrack;
     ref.btn.setAttribute("aria-label", t.downloadTrack);
     ref.cell?.removeAttribute("data-amdl-active");
@@ -493,7 +532,7 @@ function updateRowButtonVisual(ref: ButtonRef): void {
   }
   if (job.stage === "done") {
     ref.btn.dataset.state = "done";
-    ref.btn.innerHTML = ICON_CHECK;
+    setIcon(ref.btn, ICON_CHECK, "check");
     const detail = job.notes.length
       ? `${t.downloaded} — ${job.message} (${job.notes.join("; ")})`
       : `${t.downloaded} — ${job.message}`;
@@ -504,17 +543,17 @@ function updateRowButtonVisual(ref: ButtonRef): void {
   }
   if (job.stage === "error") {
     ref.btn.dataset.state = "error";
-    ref.btn.innerHTML = ICON_ERROR;
+    setIcon(ref.btn, ICON_ERROR, "error");
     const msg = `${t.failed}: ${job.error || job.message} (${t.retry})`;
     ref.btn.title = msg;
     ref.btn.setAttribute("aria-label", msg);
     ref.cell?.setAttribute("data-amdl-active", "true");
     return;
   }
-  ref.btn.dataset.state = "working";
-  const ratio = job.total > 0 && job.done > 0 ? job.done / job.total : null;
-  ref.btn.innerHTML = renderProgressRing(ratio);
-  const pct = ratio !== null ? ` (${Math.round(ratio * 100)}%)` : "";
+  ref.btn.dataset.state = job.stage === "queued" ? "queued" : "working";
+  const ratio = jobProgress(job);
+  setRing(ref.btn, ratio);
+  const pct = job.stage === "queued" ? "" : ` (${Math.round(ratio * 100)}%)`;
   const msg = `${t.downloading}${pct} — ${job.message || job.stage}`;
   ref.btn.title = msg;
   ref.btn.setAttribute("aria-label", msg);
@@ -528,30 +567,30 @@ function updateHeaderButtonVisual(ref: ButtonRef): void {
     const job = jobsByUiKey.get(buildUiJobKey(ref.songId));
     if (!job || job.stage === "cancelled") {
       ref.btn.dataset.state = "idle";
-      ref.btn.innerHTML = ICON_DOWNLOAD;
+      setIcon(ref.btn, ICON_DOWNLOAD, "download");
       ref.btn.title = t.downloadTrack;
       ref.btn.setAttribute("aria-label", t.downloadTrack);
       return;
     }
     if (job.stage === "done") {
       ref.btn.dataset.state = "done";
-      ref.btn.innerHTML = ICON_CHECK;
+      setIcon(ref.btn, ICON_CHECK, "check");
       ref.btn.title = `${t.downloaded} — ${job.message}`;
       ref.btn.setAttribute("aria-label", t.downloaded);
       return;
     }
     if (job.stage === "error") {
       ref.btn.dataset.state = "error";
-      ref.btn.innerHTML = ICON_ERROR;
+      setIcon(ref.btn, ICON_ERROR, "error");
       const errMsg = `${t.failed}: ${job.error || job.message} (${t.retry})`;
       ref.btn.title = errMsg;
       ref.btn.setAttribute("aria-label", errMsg);
       return;
     }
-    ref.btn.dataset.state = "working";
-    const ratio = job.total > 0 && job.done > 0 ? job.done / job.total : null;
-    ref.btn.innerHTML = renderProgressRing(ratio);
-    const pct = ratio !== null ? ` (${Math.round(ratio * 100)}%)` : "";
+    ref.btn.dataset.state = job.stage === "queued" ? "queued" : "working";
+    const ratio = jobProgress(job);
+    setRing(ref.btn, ratio);
+    const pct = job.stage === "queued" ? "" : ` (${Math.round(ratio * 100)}%)`;
     const msg = `${t.downloading}${pct}`;
     ref.btn.title = `${msg} — ${job.message}`;
     ref.btn.setAttribute("aria-label", msg);
@@ -569,8 +608,8 @@ function updateHeaderButtonVisual(ref: ButtonRef): void {
   const extraNote = collectionNotes.get(key) || "";
 
   if (enqueueInFlight.has(key)) {
-    ref.btn.dataset.state = "working";
-    ref.btn.innerHTML = renderProgressRing(null);
+    ref.btn.dataset.state = "queued";
+    setRing(ref.btn, 0);
     ref.btn.title = t.queueing;
     ref.btn.setAttribute("aria-label", t.queueing);
     return;
@@ -578,7 +617,7 @@ function updateHeaderButtonVisual(ref: ButtonRef): void {
 
   if (!summary) {
     ref.btn.dataset.state = "idle";
-    ref.btn.innerHTML = ICON_DOWNLOAD;
+    setIcon(ref.btn, ICON_DOWNLOAD, "download");
     ref.btn.title = extraNote ? `${idleLabel} (${extraNote})` : idleLabel;
     ref.btn.setAttribute("aria-label", idleLabel);
     return;
@@ -592,7 +631,7 @@ function updateHeaderButtonVisual(ref: ButtonRef): void {
         : idleLabel;
     ref.btn.dataset.state =
       (summary.skippedUnavailableCount ?? 0) > 0 ? "unavailable" : "idle";
-    ref.btn.innerHTML = ICON_DOWNLOAD;
+    setIcon(ref.btn, ICON_DOWNLOAD, "download");
     ref.btn.title = msg;
     ref.btn.setAttribute("aria-label", msg);
     return;
@@ -601,6 +640,7 @@ function updateHeaderButtonVisual(ref: ButtonRef): void {
   let doneCount = 0;
   let activeCount = 0;
   let errCount = 0;
+  let progressSum = 0;
   for (let i = 0; i < downloadable.length; i++) {
     const tr = downloadable[i]!;
     const plCtx: PlaylistContext | undefined = isPl
@@ -612,6 +652,7 @@ function updateHeaderButtonVisual(ref: ButtonRef): void {
       : undefined;
     const j = jobsByUiKey.get(buildUiJobKey(tr.id, plCtx));
     if (!j) continue;
+    if (j.stage !== "cancelled" && j.stage !== "error") progressSum += jobProgress(j);
     if (j.stage === "done") doneCount++;
     else if (j.stage === "error") errCount++;
     else if (j.stage !== "cancelled") activeCount++;
@@ -620,26 +661,25 @@ function updateHeaderButtonVisual(ref: ButtonRef): void {
   const suffix = extraNote ? ` · ${extraNote}` : "";
   if (activeCount > 0) {
     ref.btn.dataset.state = "working";
-    const ratio = doneCount > 0 ? doneCount / downloadable.length : null;
-    ref.btn.innerHTML = renderProgressRing(ratio);
+    setRing(ref.btn, progressSum / downloadable.length);
     const msg = `${t.downloading} ${doneCount}/${downloadable.length}${suffix}`;
     ref.btn.title = msg;
     ref.btn.setAttribute("aria-label", msg);
   } else if (doneCount === downloadable.length) {
     ref.btn.dataset.state = "done";
-    ref.btn.innerHTML = ICON_CHECK;
+    setIcon(ref.btn, ICON_CHECK, "check");
     const msg = `${doneLabel} (${doneCount}/${downloadable.length})${suffix}`;
     ref.btn.title = msg;
     ref.btn.setAttribute("aria-label", doneLabel);
   } else if (errCount > 0) {
     ref.btn.dataset.state = "error";
-    ref.btn.innerHTML = ICON_ERROR;
+    setIcon(ref.btn, ICON_ERROR, "error");
     const msg = `${t.failed} (${errCount}/${downloadable.length}) — ${t.retry}${suffix}`;
     ref.btn.title = msg;
     ref.btn.setAttribute("aria-label", msg);
   } else {
     ref.btn.dataset.state = "idle";
-    ref.btn.innerHTML = ICON_DOWNLOAD;
+    setIcon(ref.btn, ICON_DOWNLOAD, "download");
     const msg = `${idleLabel} (${downloadable.length})${suffix}`;
     ref.btn.title = msg;
     ref.btn.setAttribute("aria-label", idleLabel);

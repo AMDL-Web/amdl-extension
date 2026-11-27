@@ -395,7 +395,7 @@ async function resolveCollectionSummary(
   } else if (kind === "library-album") {
     const mut = memoryTokens.musicUserToken?.trim() || "";
     const libAlbum = await appleApi.libraryAlbum(mut, id, language);
-    let tracks: AlbumTrackSummary[] = libAlbum.tracks.map((t) => ({
+    const tracks: AlbumTrackSummary[] = libAlbum.tracks.map((t) => ({
       id: t.catalogId ?? "",
       libraryId: t.libraryId,
       name: t.name,
@@ -406,42 +406,13 @@ async function resolveCollectionSummary(
       unavailableInCatalog: t.unavailableInCatalog,
       nonSong: t.kind !== "song",
     }));
-    let skippedUnavailableCount = tracks.filter(
+    const skippedUnavailableCount = tracks.filter(
       (t) => t.unavailableInCatalog,
     ).length;
-    let skippedNonSongCount = tracks.filter((t) => t.nonSong).length;
+    const skippedNonSongCount = tracks.filter((t) => t.nonSong).length;
 
-    if (libAlbum.catalogAlbumId) {
-      try {
-        const catAlbum = await appleApi.album(
-          sf,
-          libAlbum.catalogAlbumId,
-          language,
-        );
-        if (catAlbum.tracks.length > 0) {
-          tracks = catAlbum.tracks.map((t, idx) => ({
-            id: t.id,
-            name: t.name,
-            artistName: t.artistName,
-            trackNumber: t.trackNumber,
-            discNumber: t.discNumber,
-            playlistIndex: idx + 1,
-          }));
-          skippedUnavailableCount = 0;
-          skippedNonSongCount = 0;
-        }
-      } catch (err) {
-        logger.warn(
-          "catalog album lookup for library album failed; falling back to library track catalogIds",
-          {
-            libraryAlbumId: id,
-            catalogAlbumId: libAlbum.catalogAlbumId,
-            error: err instanceof Error ? err.message : String(err),
-          },
-        );
-      }
-    }
-
+    // A library album lists only the tracks lyjw saved; download exactly what the
+    // page shows (never expand to the full catalog album).
     summary = {
       id: libAlbum.id,
       kind: "library-album",
