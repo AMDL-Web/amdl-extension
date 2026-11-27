@@ -67,15 +67,15 @@ jobs:
         working-directory: crates/temari-wasm
         run: cargo build --release --locked --target wasm32-unknown-unknown
 
-      - name: Compare with the committed binary
+      - name: Check the committed binary is reproducible
         run: |
           built=crates/temari-wasm/target/wasm32-unknown-unknown/release/temari_wasm.wasm
           ls -l "$built" src/wasm/temari.wasm
-          if cmp -s "$built" src/wasm/temari.wasm; then
-            echo "temari.wasm is byte-identical to the source build." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "::notice::temari.wasm differs byte-wise from this toolchain's build; the golden-vector test below decides."
+          if ! cmp -s "$built" src/wasm/temari.wasm; then
+            echo "::error file=src/wasm/temari.wasm::Committed temari.wasm does not match the Rust 1.85 source build; run pnpm build:wasm and commit the result."
+            exit 1
           fi
+          echo "temari.wasm is byte-identical to the Rust 1.85 source build." >> "$GITHUB_STEP_SUMMARY"
           cp "$built" src/wasm/temari.wasm
 
       - uses: pnpm/action-setup@v6
